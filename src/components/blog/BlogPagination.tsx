@@ -2,10 +2,10 @@
 'use client';
 import { useState } from 'react';
 import ArticleCard from './ArticleCard';
-import type { Article } from '@/lib/blog/supabase-blog';
+import type { ArticleSummary } from '@/lib/blog/supabase-blog';
 
 interface BlogPaginationProps {
-  articles: Article[];
+  articles: ArticleSummary[];
   pageSize: number;
 }
 
@@ -28,6 +28,8 @@ export default function BlogPagination({ articles, pageSize }: BlogPaginationPro
             <button
               key={p}
               onClick={() => setPage(p)}
+              aria-label={`Página ${p}`}
+              aria-current={p === page ? 'page' : undefined}
               className={`w-9 h-9 rounded-full text-sm font-mono transition-all ${
                 p === page
                   ? 'bg-primary text-primary-foreground'

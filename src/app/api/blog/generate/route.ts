@@ -3,10 +3,23 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { claimBlogRunToday, insertArticle, insertRunLog, getPublishedKeywords } from '@/lib/blog/supabase-blog';
+import { claimBlogRunToday, insertArticle, insertRunLog, getPublishedKeywords, getLinkCandidates } from '@/lib/blog/supabase-blog';
+import { getNextPlannedEntry, markPublished, saveOutlineStructure, type EditorialBrief } from '@/lib/blog/editorial-calendar';
 import { fetchTopKeyword } from '@/lib/blog/gsc';
-import { generateArticle } from '@/lib/blog/deepseek';
-import { generateAndUploadCover, renderArticleImages } from '@/lib/blog/image-gen';
+import {
+  generateArticle,
+  generateArticleFromOutline,
+  generateArticleOutline,
+  type ArticleContent,
+  type ArticleOutline,
+  type InternalLink,
+} from '@/lib/blog/deepseek';
+import { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } from '@/lib/blog/image-gen';
+import { injectBodyImages, injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
+import { validateArticle } from '@/lib/blog/validate';
+import { scoreInternalLinks } from '@/lib/blog/internal-links';
+import { distributeArticle, buildDistributionArticle } from '@/lib/blog/distribution';
+import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization') ?? '';
@@ -26,28 +39,119 @@ export async function GET(request: NextRequest) {
   let keyword: string | undefined;
 
   try {
-    // 1. Keyword do dia
-    const existingKeywords = await getPublishedKeywords();
-    keyword = await fetchTopKeyword(existingKeywords);
+    // 1. Keyword do dia: pauta do calendário TEM precedência (o dono agenda);
+    //    dia sem pauta cai no seed rotativo/GSC.
+    let brief: EditorialBrief | null = null;
+    try {
+      const planned = await getNextPlannedEntry();
+      if (planned) {
+        keyword = planned.keyword;
+        brief = planned;
+      }
+    } catch (err) {
+      console.warn('[blog/generate] Calendário indisponível:', err);
+    }
+    if (!keyword) {
+      // getPublishedKeywords só é necessário no fallback — economiza 1 query
+      // quando a pauta veio do calendário.
+      const existingKeywords = await getPublishedKeywords();
+      keyword = await fetchTopKeyword(existingKeywords);
+    }
+    if (!keyword) throw new Error('keyword_not_resolved');
+    const kw = keyword; // string narrowed — closure do validador não refina variável let
 
-    // 2. Gerar artigo
-    const article = await generateArticle(keyword);
+    // 1.5. Links internos: fixos do perfil + dinâmicos dos artigos publicados (overlap de tokens)
+    const profileLinks: InternalLink[] = AUTOBLOG_PROFILE.editorial.internalLinks.map(l => ({
+      label: l.label,
+      url: l.url,
+    }));
+    let dynamicLinks: InternalLink[] = [];
+    try {
+      const profileUrls = new Set(profileLinks.map(l => l.url));
+      dynamicLinks = scoreInternalLinks(kw, await getLinkCandidates())
+        .filter(l => !profileUrls.has(l.url)); // sem duplicata com os links fixos do perfil
+    } catch (err) {
+      console.warn('[blog/generate] Interlinkagem indisponível:', err);
+    }
+    const internalLinks = [...profileLinks, ...dynamicLinks];
+
+    // 2. Gerar artigo + validar checklist on-page (Yoast-style).
+    //    Falhou → regenera UMA vez; falhou de novo → publica com avisos no response.
+    const validate = (a: ArticleContent) =>
+      validateArticle({
+        keyword: kw,
+        title: a.title,
+        pageTitle: a.page_title ?? null,
+        metaDesc: a.meta_desc,
+        content: a.content,
+        siteUrl: AUTOBLOG_PROFILE.brand.siteUrl,
+        ctaUrl: AUTOBLOG_PROFILE.cta.url,
+        coverAlt: a.cover_alt ?? null,
+        category: a.category ?? null,
+        allowedCategories: AUTOBLOG_PROFILE.editorial.categories.map(c => c.slug),
+      });
+
+    // 2 etapas (opcional): outline validado primeiro, depois o corpo — RD recomenda
+    const twoStage = AUTOBLOG_PROFILE.integrations.twoStageGenerationEnabled;
+    let outline: ArticleOutline | null = null;
+    let article: ArticleContent;
+    if (twoStage) {
+      outline = await generateArticleOutline(kw);
+      // Guarda a estrutura aprovada na pauta do calendário (no-op se a keyword veio do seed)
+      await saveOutlineStructure(kw, JSON.stringify(outline)).catch(() => {});
+      article = await generateArticleFromOutline(kw, outline, internalLinks, brief);
+    } else {
+      article = await generateArticle(kw, internalLinks, brief);
+    }
+
+    let report = validate(article);
+    if (!report.ok) {
+      console.warn('[blog/generate] Checklist on-page falhou — regenerando:', report.issues);
+      article = twoStage && outline
+        ? await generateArticleFromOutline(kw, outline, internalLinks, brief)
+        : await generateArticle(kw, internalLinks, brief);
+      report = validate(article);
+    }
+    const warnings = report.ok ? [] : report.issues;
 
     // 3. Gerar imagem de capa (falha silenciosa — não bloqueia publicação)
     const coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
 
-    // 3.5 Imagens do corpo: substitui os marcadores {{IMAGEM:...}} do texto
-    // por figuras geradas/upadas (falha por imagem é silenciosa).
-    const renderedContent = await renderArticleImages(article.content, article.slug);
+    // 3.5 Imagens do corpo: 1-2 quebrando o texto, alt com keyword (flag imageGenerationEnabled)
+    const bodyImages = await generateAndUploadBodyImages(
+      [
+        `${article.image_prompt}, wide establishing shot, no text`,
+        `${article.image_prompt}, detail close-up, no text`,
+      ],
+      article.slug,
+      kw,
+    );
+    const finalContent = injectBodyImages(article.content, bodyImages);
+
+    // 3.6 Infográfico (flag infographicsEnabled): resumo visual antes do fechamento
+    const infographicUrl = await generateAndUploadInfographic(article.image_prompt, article.slug);
+    const finalContentWithInfographic = injectInfographic(
+      finalContent,
+      infographicUrl ? { url: infographicUrl, alt: `${kw} — infográfico` } : null,
+    );
+
+    // 3.7 Um CTA após CADA imagem do corpo (regra editorial do dono)
+    const cta = AUTOBLOG_PROFILE.cta.url.trim()
+      ? AUTOBLOG_PROFILE.cta
+      : null;
+    const contentWithCtas = injectInlineCtas(finalContentWithInfographic, cta);
 
     // 4. Salvar artigo (com collision handling interno)
     const finalSlug = await insertArticle({
       slug: article.slug,
       title: article.title,
+      page_title: article.page_title ?? null,
       meta_desc: article.meta_desc,
-      content: renderedContent,
+      content: contentWithCtas,
       cover_url: coverUrl,
+      cover_alt: article.cover_alt ?? null,
       keyword,
+      category: article.category ?? null,
     });
 
     // 5. Log de sucesso — feito IMEDIATAMENTE após insert do artigo.
@@ -55,11 +159,43 @@ export async function GET(request: NextRequest) {
     // cron run verá 'success' e não vai duplicar o artigo.
     await insertRunLog({ keyword, status: 'success' });
 
-    // 6. Revalidar páginas ISR
+    // 5.5. Marca a pauta como publicada (no-op se a keyword veio do seed)
+    await markPublished(kw, finalSlug);
+
+    // 6. Revalidar páginas ISR — inclui a categoria do artigo novo (senão fica 1h stale)
     revalidatePath('/blog');
     revalidatePath(`/blog/${finalSlug}`);
+    if (article.category) revalidatePath(`/categoria/${article.category}`);
 
-    return NextResponse.json({ success: true, slug: finalSlug });
+    // 7. Divulgação pós-publish: plugs ativos do perfil (falha de canal não derruba o pipeline)
+    const distConfig = AUTOBLOG_PROFILE.integrations.distribution;
+    if (distConfig.enabled && distConfig.channels.length > 0) {
+      try {
+        const results = await distributeArticle(
+          buildDistributionArticle({
+            title: article.title,
+            pageTitle: article.page_title ?? null,
+            slug: finalSlug,
+            metaDesc: article.meta_desc,
+            keyword: kw,
+          }),
+          [...distConfig.channels],
+        );
+        for (const result of results) {
+          if (!result.ok) {
+            console.warn(`[blog/generate] Divulgação '${result.channel}' falhou:`, result.error);
+          }
+        }
+      } catch (err) {
+        console.warn('[blog/generate] Divulgação indisponível:', err);
+      }
+    }
+
+    if (warnings.length) {
+      console.warn('[blog/generate] Publicado com ressalvas do checklist:', warnings);
+    }
+
+    return NextResponse.json({ success: true, slug: finalSlug, warnings });
 
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);

@@ -1,9 +1,9 @@
 // src/components/blog/ArticleCard.tsx
 import Link from 'next/link';
-import type { Article } from '@/lib/blog/supabase-blog';
+import type { ArticleSummary } from '@/lib/blog/supabase-blog';
 
 interface ArticleCardProps {
-  article: Pick<Article, 'slug' | 'title' | 'meta_desc' | 'cover_url' | 'keyword' | 'published_at'>;
+  article: ArticleSummary;
 }
 
 export default function ArticleCard({ article }: ArticleCardProps) {

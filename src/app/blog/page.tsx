@@ -1,8 +1,9 @@
 // src/app/blog/page.tsx
 import type { Metadata } from 'next';
 import { getAllArticles } from '@/lib/blog/supabase-blog';
-import type { Article } from '@/lib/blog/supabase-blog';
+import type { ArticleSummary } from '@/lib/blog/supabase-blog';
 import BlogPagination from '@/components/blog/BlogPagination';
+import LeadForm from '@/components/blog/LeadForm';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
 
 export const revalidate = 3600; // ISR 1h
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 12;
 
 export default async function BlogPage() {
-  let articles: Article[] = [];
+  let articles: ArticleSummary[] = [];
   try {
     articles = await getAllArticles();
   } catch {
@@ -39,6 +40,13 @@ export default async function BlogPage() {
           <p className="text-center text-muted-foreground">Nenhum artigo publicado ainda.</p>
         ) : (
           <BlogPagination articles={articles} pageSize={PAGE_SIZE} />
+        )}
+
+        {/* Captura de leads: só renderiza com plug de CRM ligado no perfil */}
+        {AUTOBLOG_PROFILE.integrations.leadCapture.enabled && (
+          <div className="max-w-xl mx-auto">
+            <LeadForm source="/blog" />
+          </div>
         )}
       </div>
     </main>

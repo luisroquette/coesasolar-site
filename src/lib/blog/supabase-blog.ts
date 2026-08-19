@@ -1,12 +1,12 @@
-// Autoblog do auditoria.coesasolar.com.br — plano B (19/08/2026):
-// tabelas prefixadas coesa_* no schema public do Supabase do CF Gauss
-// (projeto fvyknyvetpbxtdagrxqr), porque o Supabase do próprio site
-// (ztailhc...) está em conta inacessível.
+// Blog do coesasolar.com.br (19/08/2026): tabelas prefixadas coesa_* no
+// schema public do Supabase do CF Gauss (projeto fvyknyvetpbxtdagrxqr).
 //
-// Sem service_role: leituras usam a chave anon (RLS permite SELECT público
-// de artigos published); escritas usam RPCs SECURITY DEFINER
+// Escritas do pipeline (artigo diário + run log) usam RPCs SECURITY DEFINER
 // (coesa_blog_claim_run / coesa_blog_insert_article / coesa_blog_insert_run_log)
-// que validam o CRON_SECRET por hash — mesmo padrão dos gates admin_tem_*.
+// que validam o CRON_SECRET por hash — sem service_role parado no runtime.
+// Novas tabelas (comentários, métricas, links, pauta, guest posts) são
+// servidor-only: escrevem com service role via getServiceClient(), sempre
+// atrás de rotas autenticadas (CRON_SECRET ou chave de API própria).
 import { createClient } from '@supabase/supabase-js';
 
 const TABLES = {
@@ -20,6 +20,13 @@ function getClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+/** Cliente com service role — SOMENTE em código server (rotas de API/cron). */
+export function getServiceClient() {
+  const url = process.env.BLOG_SUPABASE_URL!;
+  const key = process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
 function getCronSecret(): string {
   return process.env.CRON_SECRET ?? '';
 }
@@ -28,20 +35,46 @@ export interface Article {
   id: string;
   slug: string;
   title: string;
+  page_title: string | null;
   meta_desc: string | null;
   content: string;
   cover_url: string | null;
+  cover_alt: string | null;
   keyword: string | null;
+  category: string | null;
+  published_at: string;
+  // Guest post (migration 008) — opcionais porque tabelas antigas podem não ter
+  guest_author?: string | null;
+  guest_bio?: string | null;
+  guest_url?: string | null;
+}
+
+/** Campos leves para listagem — sem `content`, que pesa centenas de KB no ISR. */
+export interface ArticleSummary {
+  slug: string;
+  title: string;
+  meta_desc: string | null;
+  cover_url: string | null;
+  keyword: string | null;
+  category: string | null;
   published_at: string;
 }
 
 export interface InsertArticleInput {
   slug: string;
   title: string;
+  page_title: string | null;
   meta_desc: string | null;
   content: string;
   cover_url: string | null;
+  cover_alt: string | null;
   keyword: string | null;
+  category: string | null;
+  // Guest post (rota protegida por CRON_SECRET): quando presentes, o insert
+  // usa service role direto em vez do RPC (byline de convidado).
+  guest_author?: string | null;
+  guest_bio?: string | null;
+  guest_url?: string | null;
 }
 
 /** Claims today's run before generation, preventing concurrent cron duplicates. */
@@ -67,15 +100,46 @@ export async function getPublishedKeywords(): Promise<string[]> {
 }
 
 export async function insertArticle(input: InsertArticleInput): Promise<string> {
+  // Guest post: insert direto com service role (byline de convidado). A rota
+  // /api/blog/guest-posts é protegida por CRON_SECRET — nunca rota pública.
+  if (input.guest_author) {
+    const supabase = getServiceClient();
+    const candidates = [input.slug, `${input.slug}-2`, `${input.slug}-3`];
+    for (const slug of candidates) {
+      const { error } = await supabase
+        .from(TABLES.articles)
+        .insert({
+          slug,
+          title: input.title,
+          page_title: input.page_title,
+          meta_desc: input.meta_desc,
+          content: input.content,
+          cover_url: input.cover_url,
+          cover_alt: input.cover_alt,
+          keyword: input.keyword,
+          category: input.category,
+          guest_author: input.guest_author,
+          guest_bio: input.guest_bio ?? null,
+          guest_url: input.guest_url ?? null,
+        });
+      if (!error) return slug;
+      if (error.code !== '23505') throw new Error(`Supabase insert error: ${error.message}`);
+    }
+    throw new Error('slug_collision');
+  }
+
   const supabase = getClient();
   const { data, error } = await supabase.rpc('coesa_blog_insert_article', {
     p_secret: getCronSecret(),
     p_slug: input.slug,
     p_title: input.title,
+    p_page_title: input.page_title,
     p_meta_desc: input.meta_desc,
     p_content: input.content,
     p_cover_url: input.cover_url,
+    p_cover_alt: input.cover_alt,
     p_keyword: input.keyword,
+    p_category: input.category,
   });
   if (error) throw new Error(`Supabase insert error: ${error.message}`);
   if (!data) throw new Error('slug_collision');
@@ -97,14 +161,59 @@ export async function insertRunLog(params: {
   if (error) console.error('[insertRunLog] RPC error:', error.message);
 }
 
-export async function getAllArticles(): Promise<Article[]> {
+/** Candidatos de interlinkagem: slugs/títulos publicados para alimentar o prompt. */
+export async function getLinkCandidates(): Promise<Array<{ slug: string; title: string }>> {
   const supabase = getClient();
   const { data } = await supabase
     .from(TABLES.articles)
-    .select('*')
+    .select('slug, title')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(30);
+  return data ?? [];
+}
+
+export async function getAllArticles(): Promise<ArticleSummary[]> {
+  const supabase = getClient();
+  const { data } = await supabase
+    .from(TABLES.articles)
+    .select('slug, title, meta_desc, cover_url, keyword, category, published_at')
     .eq('status', 'published')
     .order('published_at', { ascending: false });
   return data ?? [];
+}
+
+export async function getArticlesByCategory(category: string): Promise<ArticleSummary[]> {
+  const supabase = getClient();
+  const { data } = await supabase
+    .from(TABLES.articles)
+    .select('slug, title, meta_desc, cover_url, keyword, category, published_at')
+    .eq('status', 'published')
+    .eq('category', category)
+    .order('published_at', { ascending: false });
+  return data ?? [];
+}
+
+/** Slug + content de todos os publicados — usado na auditoria de links. */
+export async function getAllArticleContents(): Promise<Array<{ slug: string; content: string }>> {
+  const supabase = getClient();
+  const { data } = await supabase
+    .from(TABLES.articles)
+    .select('slug, content')
+    .eq('status', 'published');
+  return data ?? [];
+}
+
+/** Checagem barata de existência (sem baixar content) — validação de comentários. */
+export async function articleSlugExists(slug: string): Promise<boolean> {
+  const supabase = getClient();
+  const { data } = await supabase
+    .from(TABLES.articles)
+    .select('slug')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle();
+  return !!data;
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
@@ -118,24 +227,18 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   return data ?? null;
 }
 
-export async function uploadCoverImage(
-  slug: string,
-  buffer: Buffer
+/** Upload genérico no bucket blog-covers (capa e imagens do corpo). */
+export async function uploadImageToStorage(
+  path: string,
+  buffer: Buffer,
+  contentType: string,
 ): Promise<string | null> {
-  // Capas desligadas nesta instalação (imageGenerationEnabled: false).
-  // Sem service_role no env, o bucket não é gravável — retorna null.
-  const serviceKey = process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) return null;
-
-  const supabase = createClient(process.env.BLOG_SUPABASE_URL!, serviceKey, {
-    auth: { persistSession: false },
-  });
-  const path = `${slug}.png`;
+  const supabase = getServiceClient();
   const { error } = await supabase.storage
     .from('blog-covers')
-    .upload(path, buffer, { contentType: 'image/png', upsert: true });
+    .upload(path, buffer, { contentType, upsert: true });
   if (error) {
-    console.error('[uploadCoverImage] Storage error:', error.message);
+    console.error('[uploadImageToStorage] Storage error:', error.message);
     return null;
   }
   const { data } = supabase.storage.from('blog-covers').getPublicUrl(path);
