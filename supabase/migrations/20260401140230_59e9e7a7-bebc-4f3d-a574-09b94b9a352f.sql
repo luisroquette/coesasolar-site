@@ -1,0 +1,1 @@
+ALTER TABLE public.proposal_views ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0;

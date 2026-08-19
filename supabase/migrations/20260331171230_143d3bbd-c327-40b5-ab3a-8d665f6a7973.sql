@@ -1,0 +1,1 @@
+UPDATE configuracoes_sistema SET valor = '50', updated_at = now() WHERE chave = 'consumo_minimo_reais';

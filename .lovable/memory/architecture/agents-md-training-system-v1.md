@@ -1,0 +1,3 @@
+# Memory: architecture/agents-md-training-system-v1
+
+Implementado sistema de treinamento seguindo o padrão AGENTS.md (Passive-First). O fluxo permite upload de conversas de falha/sucesso via drag-drop ou colar texto na aba 'Treinamento > Upload'. O processamento usa a edge function 'learning-conversation-processor' com Gemini 2.5 Flash Lite para extrair: 1) Regras de comportamento para 'rule_memory'; 2) Exemplos few-shot para 'few_shot_examples'. O sistema híbrido auto-aprova regras com confiança ≥80% e envia o restante para revisão humana na aba 'Revisão'. As tabelas 'pending_learned_rules', 'few_shot_examples' e 'learning_processed_conversations' suportam o fluxo de aprendizado.

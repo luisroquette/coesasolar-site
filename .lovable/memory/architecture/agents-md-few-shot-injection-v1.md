@@ -1,0 +1,3 @@
+# Memory: architecture/agents-md-few-shot-injection-v1
+
+Implementado P2 do roadmap AGENTS.md: Few-Shot Injection. O módulo `few-shot-injector.ts` busca exemplos da tabela `few_shot_examples` baseado no estágio do funil, com mapeamento de contexto (ex: 'triagem' → ['início', 'interesse']). Os exemplos são formatados em bloco compacto AGENTS.md (`**Ex1:** 👤 "..." 🤖 "..."`), limitados a 3 exemplos com qualidade ≥70. O sistema inclui cache de 10min por agente/estágio e warm-up opcional. A integração ocorre na llm-phase.ts (seção 8) com injeção no buildSystemPrompt entre Rule Memory e RAG (seção 4 do prompt). Feature flag: `ENABLE_FEW_SHOT_INJECTION = true`.

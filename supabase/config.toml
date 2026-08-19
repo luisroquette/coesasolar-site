@@ -1,0 +1,217 @@
+project_id = "cvcdweqybgfxywcelriq"
+
+[functions.bitrix24-deal-webhook]
+verify_jwt = false
+
+[functions.import-cidades]
+verify_jwt = false
+
+[functions.manage-users]
+verify_jwt = false
+
+[functions.bitrix24-webhook]
+verify_jwt = false
+
+[functions.bitrix24-sync]
+verify_jwt = false
+
+[functions.bitrix24-upload-pdf]
+verify_jwt = false
+
+[functions.bitrix24-get-stages]
+verify_jwt = false
+
+[functions.bitrix24-list-fields]
+verify_jwt = false
+
+[functions.bitrix24-update-lead]
+verify_jwt = false
+
+[functions.aneel-tarifas]
+verify_jwt = false
+
+[functions.aneel-bandeiras]
+verify_jwt = false
+
+[functions.send-notification-email]
+verify_jwt = false
+
+[functions.extrair-dados-documentos]
+verify_jwt = false
+
+[functions.extrair-dados-contrato-social]
+verify_jwt = false
+
+[functions.bitrix24-sync-cliente-gd]
+verify_jwt = false
+
+[functions.proposal-chatbot]
+verify_jwt = false
+
+[functions.chatbot-followup-scheduler]
+verify_jwt = false
+
+[functions.sofia-webhook]
+verify_jwt = false
+
+[functions.sofia-bitrix-lead]
+verify_jwt = false
+
+[functions.chatbot-nudge-scheduler]
+verify_jwt = false
+
+[functions.contract-sent-webhook]
+verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
+
+[functions.cleanup-sofia-audio]
+verify_jwt = false
+
+[functions.z-api-webhook]
+verify_jwt = false
+
+[functions.z-api-send-message]
+verify_jwt = false
+
+[functions.public-proposal]
+verify_jwt = false
+
+[functions.cleanup-typos]
+verify_jwt = false
+
+[functions.document-recovery-scheduler]
+verify_jwt = false
+
+[functions.pending-task-scheduler]
+verify_jwt = false
+
+[functions.stuck-leads-rescue-scheduler]
+verify_jwt = false
+
+[functions.agent-source-export]
+verify_jwt = false
+
+[functions.agent-source-upload]
+verify_jwt = false
+
+[functions.bitrix24-force-update-link]
+verify_jwt = false
+
+[functions.operator-commands-poller]
+verify_jwt = false
+
+[functions.z-api-add-contact]
+verify_jwt = false
+
+[functions.create-lead-from-site]
+verify_jwt = false
+
+[functions.sofia-voice-webhook]
+verify_jwt = false
+
+[functions.process-kb-document]
+verify_jwt = false
+
+[functions.sofia-voice-outbound-webhook]
+verify_jwt = false
+
+[functions.retell-create-outbound-call]
+verify_jwt = false
+
+[functions.retell-call-webhook]
+verify_jwt = false
+
+[functions.elevenlabs-conversation-token]
+verify_jwt = false
+
+[functions.retell-web-call-token]
+verify_jwt = false
+
+[functions.maria-webhook]
+verify_jwt = false
+
+[functions.julia-webhook]
+verify_jwt = false
+
+[functions.iago-webhook]
+verify_jwt = false
+
+[functions.jaime-webhook]
+verify_jwt = false
+
+[functions.message-retry-scheduler]
+verify_jwt = false
+
+[functions.zapi-credentials-check]
+verify_jwt = false
+
+[functions.bitrix24-link-webhook]
+verify_jwt = false
+
+[functions.rag-search]
+verify_jwt = false
+
+[functions.rag-upload]
+verify_jwt = false
+
+[functions.process-rag-document]
+verify_jwt = false
+
+[functions.onedrive-sync]
+verify_jwt = false
+
+[functions.proposal-retry-scheduler]
+verify_jwt = false
+
+[functions.retroactive-learning-processor]
+verify_jwt = false
+
+[functions.pending-response-scheduler]
+verify_jwt = false
+
+[functions.technical-failure-recovery-scheduler]
+verify_jwt = false
+
+[functions.auto-learning-scheduler]
+verify_jwt = false
+
+[functions.onedrive-create-folder]
+verify_jwt = false
+
+[functions.ensure-learning-folders]
+verify_jwt = false
+
+[functions.onedrive-list-folder]
+verify_jwt = false
+
+[functions.sofia-regression-tests]
+verify_jwt = false
+
+[functions.rag-batch-processor]
+verify_jwt = false
+
+[functions.sofia-daily-stats]
+verify_jwt = false
+
+[functions.sofia-pipeline]
+verify_jwt = false
+
+[functions.sofia-hot-lead-alert]
+verify_jwt = false
+
+[functions.sofia-weekly-stats]
+verify_jwt = false
+
+[functions.infra-monitor-scheduler]
+verify_jwt = false
+
+[functions.retell-sofia-webhook]
+verify_jwt = false
+
+[functions.append-evaluation-sheet]
+verify_jwt = false
+
+[functions.process-evaluation-dataset]
+verify_jwt = false

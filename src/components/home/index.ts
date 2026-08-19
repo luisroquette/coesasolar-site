@@ -1,0 +1,15 @@
+export { HomeNavbar } from "./HomeNavbar";
+export { HeroSection } from "./HeroSection";
+export { BenefitsSection } from "./BenefitsSection";
+export { SimulationForm } from "./SimulationForm";
+export { WhyChooseSection } from "./WhyChooseSection";
+export { AboutSection } from "./AboutSection";
+export { StatsCounter } from "./StatsCounter";
+export { PlansSection } from "./PlansSection";
+export { HowItWorksSection } from "./HowItWorksSection";
+export { FAQSection } from "./FAQSection";
+export { CTASection } from "./CTASection";
+export { HomeFooter } from "./HomeFooter";
+export { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
+export { CalculatorSection } from "./CalculatorSection";
+export { EconomyCalculator } from "./EconomyCalculator";
