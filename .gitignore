@@ -30,3 +30,6 @@ dist-ssr
 
 # Build do Next — nunca versionar
 .next/
+
+# artefato de ferramenta local, não é código
+.qlaude/
