@@ -33,3 +33,4 @@ dist-ssr
 
 # artefato de ferramenta local, não é código
 .qlaude/
+tsconfig.tsbuildinfo
