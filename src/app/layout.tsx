@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Script from "next/script"
+import { AUTOBLOG_PROFILE } from "@/lib/autoblog-profile"
 import "../index.css"
 
 export const metadata: Metadata = {
@@ -25,17 +26,24 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // GA4 plugado no perfil do autoblog — um lugar só pra ligar/desligar/trocar o ID.
+  const gaMeasurementId = AUTOBLOG_PROFILE.integrations.googleAnalyticsMeasurementId;
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
         {children}
-        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-TKZQ0VXJ61" />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`window.dataLayer = window.dataLayer || [];
+        {gaMeasurementId && (
+          <>
+            <Script async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`} />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-TKZQ0VXJ61');`}
-        </Script>
+gtag('config', '${gaMeasurementId}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   )

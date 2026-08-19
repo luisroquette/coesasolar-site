@@ -51,6 +51,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.24.10",
+    "googleapis": "^176.0.0",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "jsdom": "^20.0.3",
