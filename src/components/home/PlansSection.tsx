@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlanosComerciais, PlanoComercial } from "@/hooks/usePlanosComerciais";
-import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { WHATSAPP_5192 } from "@/lib/whatsapp-numbers";
 import { useMemo } from "react";
 
 // Fallback para planos caso não carregue do banco
@@ -31,10 +31,9 @@ const defaultPlans = [
 ];
 
 export function PlansSection() {
-  const { configs } = useConfiguracoes();
   const { planos, loading } = usePlanosComerciais();
-  
-  const whatsappUrl = `https://wa.me/${configs.whatsapp_numero}?text=Olá! Vim pelo site e gostaria de contratar um plano de energia solar.`;
+
+  const whatsappUrl = `https://wa.me/${WHATSAPP_5192}?text=Olá! Vim pelo site e gostaria de contratar um plano de energia solar.`;
 
   // Usar dados dinâmicos do banco (consumo_range e features)
   const plans = useMemo(() => {

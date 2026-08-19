@@ -3,6 +3,7 @@ import { ChevronDown, Zap, Leaf, Shield, Clock, LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { WHATSAPP_5193 } from "@/lib/whatsapp-numbers";
 
 const iconMap: Record<string, LucideIcon> = {
   Zap, Leaf, Shield, Clock
@@ -103,7 +104,7 @@ export function HeroSection() {
                 Simular Economia
               </Button>
               <a 
-                href="https://wa.me/5531936180487?text=Olá! Vim pelo site e gostaria de saber mais sobre energia solar por assinatura."
+                href={`https://wa.me/${WHATSAPP_5193}?text=Olá! Vim pelo site e gostaria de saber mais sobre energia solar por assinatura.`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

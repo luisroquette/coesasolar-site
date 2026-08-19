@@ -1,10 +1,9 @@
 import { MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { WHATSAPP_5192 } from "@/lib/whatsapp-numbers";
 
 export function WhatsAppFloatingButton() {
-  const { configs } = useConfiguracoes();
-  const whatsappUrl = `https://wa.me/${configs.whatsapp_numero}?text=Olá! Vim pelo site e gostaria de saber mais sobre o desconto na conta de luz.`;
+  const whatsappUrl = `https://wa.me/${WHATSAPP_5192}?text=Olá! Vim pelo site e gostaria de saber mais sobre o desconto na conta de luz.`;
 
   return (
     <motion.a

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { WHATSAPP_5193 } from "@/lib/whatsapp-numbers";
 
 export function CTASection() {
   const { configs } = useConfiguracoes();
@@ -12,7 +13,7 @@ export function CTASection() {
     }
   };
 
-  const whatsappUrl = `https://wa.me/${configs.whatsapp_numero}?text=Olá! Vim pelo site e quero começar a economizar na conta de luz.`;
+  const whatsappUrl = `https://wa.me/${WHATSAPP_5193}?text=Olá! Vim pelo site e quero começar a economizar na conta de luz.`;
 
   return (
     <section className="relative py-32 lg:py-48 bg-black text-white overflow-hidden">

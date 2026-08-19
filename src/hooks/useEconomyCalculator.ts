@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { WHATSAPP_5193 } from '@/lib/whatsapp-numbers';
 
 export interface EconomyConfig {
   disponibilidadeMonofasico: number;
@@ -12,7 +13,6 @@ export interface EconomyConfig {
   unlockThreshold: number;
   descontoDefault: number;
   fidelidadeDefault: number;
-  whatsappNumero: string;
 }
 
 export interface PlanoComercial {
@@ -64,7 +64,6 @@ const defaultConfig: EconomyConfig = {
   unlockThreshold: 3000,
   descontoDefault: 25,
   fidelidadeDefault: 3,
-  whatsappNumero: '5531936180487',
 };
 
 // Cache for configs
@@ -159,7 +158,6 @@ export function useEconomyCalculator() {
           unlockThreshold: parseFloat(configMap.get('economy_unlock_threshold') || '') || defaultConfig.unlockThreshold,
           descontoDefault: parseFloat(configMap.get('economy_desconto_default') || '') || defaultConfig.descontoDefault,
           fidelidadeDefault: parseFloat(configMap.get('economy_fidelidade_default') || '') || defaultConfig.fidelidadeDefault,
-          whatsappNumero: configMap.get('whatsapp_numero') || defaultConfig.whatsappNumero,
         };
 
         // Build ICMS map by UF
@@ -331,13 +329,10 @@ export function useEconomyCalculator() {
     [config, planos]
   );
 
-  const getWhatsAppLink = useCallback(
-    (mensagem?: string) => {
-      const texto = mensagem || 'Olá! Vi a calculadora no site e gostaria de um orçamento.';
-      return `https://wa.me/${config.whatsappNumero}?text=${encodeURIComponent(texto)}`;
-    },
-    [config.whatsappNumero]
-  );
+  const getWhatsAppLink = useCallback((mensagem?: string) => {
+    const texto = mensagem || 'Olá! Vi a calculadora no site e gostaria de um orçamento.';
+    return `https://wa.me/${WHATSAPP_5193}?text=${encodeURIComponent(texto)}`;
+  }, []);
 
   return {
     config,
