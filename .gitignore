@@ -26,3 +26,7 @@ dist-ssr
 
 # Env local — nunca versionar
 .env
+.env*
+
+# Build do Next — nunca versionar
+.next/
