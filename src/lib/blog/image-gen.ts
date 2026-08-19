@@ -38,6 +38,31 @@ export async function generateAndUploadCover(
  * imagens geradas e enviadas ao storage. Cada imagem falha em silêncio:
  * o marcador é removido e o artigo publica sem aquela figura.
  */
+/**
+ * Se o gerador não incluiu marcadores {{IMAGEM:...}} (acontece), insere 2-3
+ * sintéticos antes dos H2s pares — o texto fica ilustrado de qualquer forma.
+ */
+function ensureImageMarkers(content: string): string {
+  if (/\{\{IMAGEM:/.test(content)) return content;
+
+  const parts = content.split(/(?=^## )/m);
+  const out: string[] = [];
+  let h2Index = 0;
+
+  for (const part of parts) {
+    if (part.startsWith('## ')) {
+      h2Index += 1;
+      if (h2Index % 2 === 0) {
+        const sectionTitle = part.split('\n')[0].replace(/^## /, '').trim();
+        out.push(`{{IMAGEM: ilustração editorial fotorrealista sobre "${sectionTitle}" no contexto de energia solar por assinatura}}`);
+      }
+    }
+    out.push(part);
+  }
+
+  return out.join('\n');
+}
+
 export async function renderArticleImages(
   content: string,
   slug: string,
@@ -46,11 +71,12 @@ export async function renderArticleImages(
     return content.replace(/\{\{IMAGEM:[^}]*\}\}/g, '').trim();
   }
 
-  const markers = [...content.matchAll(/\{\{IMAGEM:\s*([^}]+)\}\}/g)];
+  const withMarkers = ensureImageMarkers(content);
+  const markers = [...withMarkers.matchAll(/\{\{IMAGEM:\s*([^}]+)\}\}/g)];
   if (markers.length === 0) return content;
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  let result = content;
+  let result = withMarkers;
   let index = 0;
 
   for (const marker of markers) {
