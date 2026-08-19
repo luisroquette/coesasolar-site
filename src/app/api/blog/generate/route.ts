@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { claimBlogRunToday, insertArticle, insertRunLog, getPublishedKeywords } from '@/lib/blog/supabase-blog';
 import { fetchTopKeyword } from '@/lib/blog/gsc';
 import { generateArticle } from '@/lib/blog/deepseek';
-import { generateAndUploadCover } from '@/lib/blog/image-gen';
+import { generateAndUploadCover, renderArticleImages } from '@/lib/blog/image-gen';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization') ?? '';
@@ -36,12 +36,16 @@ export async function GET(request: NextRequest) {
     // 3. Gerar imagem de capa (falha silenciosa — não bloqueia publicação)
     const coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
 
+    // 3.5 Imagens do corpo: substitui os marcadores {{IMAGEM:...}} do texto
+    // por figuras geradas/upadas (falha por imagem é silenciosa).
+    const renderedContent = await renderArticleImages(article.content, article.slug);
+
     // 4. Salvar artigo (com collision handling interno)
     const finalSlug = await insertArticle({
       slug: article.slug,
       title: article.title,
       meta_desc: article.meta_desc,
-      content: article.content,
+      content: renderedContent,
       cover_url: coverUrl,
       keyword,
     });

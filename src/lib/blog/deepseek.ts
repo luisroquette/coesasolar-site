@@ -78,7 +78,7 @@ CHECKLIST interno antes de gerar (valide cada item):
 - [ ] Links internos com âncoras naturais distribuídos no texto
 - [ ] Ao menos 1 link externo real e relevante (nunca URL inventada; se não tiver certeza, omitir)
 - [ ] CTA final com link de contato específico
-- [ ] ZERO markdown de imagem no content (sem ![]() )`;
+- [ ] 3 a 4 imagens no corpo: marcador {{IMAGEM: descrição curta do que a cena deve mostrar}} em LINHA PRÓPRIA, logo após o lead e após ~cada 2 H2s; a descrição descreve a cena (ex.: "teto com painéis solares e uma conta de luz ao lado, vista ampla"), SEM texto na imagem, SEM logo, SEM pessoas identificáveis; ZERO markdown de imagem (sem ![]() )`;
 }
 
 function parseResponse(text: string): ArticleContent | null {
