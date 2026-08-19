@@ -45,6 +45,13 @@ ${editorial.tone}
 - Vocabulário proibido: "solução inovadora", "cada vez mais", "é importante ressaltar",
   "de acordo com especialistas", "no contexto atual", "vários"/"alguns" sem número.
 
+## IMAGENS NO CORPO (OBRIGATÓRIO)
+Inclua EXATAMENTE 3 a 4 marcadores de imagem, um por linha própria, no formato:
+{{IMAGEM: descrição curta da cena}}
+Coloque o primeiro logo após o lead e os demais após ~cada 2 H2s. A descrição
+descreve a cena em português (ex.: "painéis solares no telhado de uma casa,
+céu limpo"). NUNCA use markdown de imagem (![]()) — apenas os marcadores.
+
 ## LINKS INTERNOS OBRIGATÓRIOS (âncoras naturais, distribuídas pelo texto)
 ${internalLinks}
 
