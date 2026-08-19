@@ -51,6 +51,18 @@ Inclua EXATAMENTE 3 a 4 marcadores de imagem, um por linha própria, no formato:
 Coloque o primeiro logo após o lead e os demais após ~cada 2 H2s. A descrição
 descreve a cena em português (ex.: "painéis solares no telhado de uma casa,
 céu limpo"). NUNCA use markdown de imagem (![]()) — apenas os marcadores.
+O pipeline insere um CTA automaticamente após cada imagem — não escreva CTA
+extra ao redor dos marcadores.
+
+## FORMATO DO CORPO (OBRIGATÓRIO)
+- Abuse de listas com marcadores e listas numeradas: transforme parágrafos
+  descritivos em bullets sempre que fizer sentido.
+- Para qualquer processo ou passo a passo, use fluxograma textual em linhas
+  de setas: "Passo 1 → Passo 2 → Passo 3" (uma linha por etapa quando o
+  processo tiver ramificações).
+- Use tabelas markdown para comparações (bandeiras tarifárias, planos,
+  modalidades, tarifas) — no mínimo 1 tabela quando o tema tiver itens
+  comparáveis.
 
 ## LINKS INTERNOS OBRIGATÓRIOS (âncoras naturais, distribuídas pelo texto)
 ${internalLinks}

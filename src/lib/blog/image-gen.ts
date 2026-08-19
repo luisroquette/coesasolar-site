@@ -105,9 +105,13 @@ export async function renderArticleImages(
         `${slug}-fig-${index}`,
         Buffer.from(b64, 'base64'),
       );
+      // CTA curto após cada imagem — link interno fixo do simulador.
+      const ctaLine =
+        `\n\n> **${AUTOBLOG_PROFILE.cta.buttonLabel}:** ` +
+        `[${AUTOBLOG_PROFILE.cta.title} — ${AUTOBLOG_PROFILE.cta.subtitle}](${AUTOBLOG_PROFILE.cta.url})\n\n`;
       result = result.replace(
         marker[0],
-        url ? `![${description}](${url})` : '',
+        url ? `![${description}](${url})${ctaLine}` : '',
       );
     } catch (err) {
       console.error(`[image-gen] Figura ${index} falhou, removendo marcador:`, err);
