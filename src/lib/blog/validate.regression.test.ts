@@ -25,6 +25,8 @@ function makeValidInput(overrides: Partial<ValidationInput> = {}): ValidationInp
     '',
     fill(20),
     '',
+    '> "Quem compara custo total antes de assinar economiza retrabalho." — Ana Ribeiro, consultora de compras B2B',
+    '',
     '### Orçamento realista',
     '',
     fill(10),
@@ -49,6 +51,12 @@ function makeValidInput(overrides: Partial<ValidationInput> = {}): ValidationInp
     '## Sinais de um bom contrato',
     '',
     fill(10),
+    '',
+    '## Em resumo',
+    '',
+    '- Avalie entrega, suporte, contrato e custo total antes de decidir.',
+    '- Compare três propostas lado a lado antes de fechar negócio.',
+    '- Antecipe a objeção do contrato e peça prazo de resposta por escrito.',
     '',
     '## Conclusão',
     '',
@@ -156,6 +164,9 @@ describe('REGRESSÃO: validador pós-geração (checklist Neil/RD)', () => {
     input.content = input.content
       .replace('- Cobrar só o preço inicial e ignorar o custo total\n', '')
       .replace('- Assinar contrato sem prazo de resposta do suporte\n', '')
+      .replace('- Avalie entrega, suporte, contrato e custo total antes de decidir.\n', '')
+      .replace('- Compare três propostas lado a lado antes de fechar negócio.\n', '')
+      .replace('- Antecipe a objeção do contrato e peça prazo de resposta por escrito.\n', '')
       .replace('**Compare três propostas lado a lado.** ', '');
     expect(rules(input)).toContain('scannability');
   });
@@ -249,5 +260,44 @@ describe('REGRESSÃO: validador pós-geração (checklist Neil/RD)', () => {
     // deste caso passaria do piso; com o strip, reprova por article curto demais.
     input.content = `Artigo mínimo de exemplo.\n\n\`\`\`\n${fill(80)}\n\`\`\``;
     expect(rules(input)).toContain('word_count');
+  });
+
+  it('summary_box: reprova artigo sem o H2 "Em resumo" (box citável GEO)', () => {
+    const input = makeValidInput();
+    input.content = input.content.replace(/## Em resumo[\s\S]*?## Conclusão/, '## Conclusão');
+    expect(rules(input)).toContain('summary_box');
+  });
+
+  it('summary_box: reprova "Em resumo" com menos de 3 bullets', () => {
+    const input = makeValidInput();
+    input.content = input.content.replace(
+      '- Avalie entrega, suporte, contrato e custo total antes de decidir.\n',
+      ''
+    );
+    expect(rules(input)).toContain('summary_box');
+  });
+
+  it('citation_blocks: reprova artigo sem nenhuma citação em blockquote', () => {
+    const input = makeValidInput();
+    input.content = input.content.replace(
+      '> "Quem compara custo total antes de assinar economiza retrabalho." — Ana Ribeiro, consultora de compras B2B',
+      ''
+    );
+    expect(rules(input)).toContain('citation_blocks');
+  });
+
+  it('citation_blocks: aceita blockquote sem espaço após o ">" (markdown válido)', () => {
+    const input = makeValidInput();
+    input.content = input.content.replace(
+      '> "Quem compara custo total antes de assinar economiza retrabalho." — Ana Ribeiro, consultora de compras B2B',
+      '>"Quem compara custo total antes de assinar economiza retrabalho." — Ana Ribeiro, consultora de compras B2B'
+    );
+    expect(rules(input)).not.toContain('citation_blocks');
+  });
+
+  it('h2_count: o H2 "Em resumo" não conta na janela de 4 a 6', () => {
+    const input = makeValidInput();
+    // 5 H2s de conteúdo + "Em resumo" = 6 H2s no total; sem o filtro, 'h2_count' dispararia
+    expect(rules(input)).not.toContain('h2_count');
   });
 });

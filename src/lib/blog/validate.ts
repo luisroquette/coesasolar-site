@@ -95,7 +95,10 @@ export function validateArticle(input: ValidationInput): ValidationResult {
   }
 
   // 4. 4 a 6 H2s, com a keyword em pelo menos um deles
-  const h2s = codeStripped.match(/^##\s.*$/gm) ?? [];
+  // O H2 fixo "Em resumo" (box GEO) não conta na janela — não é bloco de conteúdo.
+  const h2s = (codeStripped.match(/^##\s.*$/gm) ?? []).filter(
+    h => !/^##\s*em resumo\s*$/i.test(h)
+  );
   if (h2s.length < 4 || h2s.length > 6) {
     add('h2_count', `${h2s.length} H2s — esperado entre 4 e 6.`);
   }
@@ -186,6 +189,25 @@ export function validateArticle(input: ValidationInput): ValidationResult {
     add('grammar_basics', 'Espaço antes de pontuação no texto.');
   } else if (/\.\./.test(content.replace(/\.\.\./g, ''))) {
     add('grammar_basics', 'Ponto duplo fora de reticências no texto.');
+  }
+
+  // 14. Citações em blockquote: pelo menos 1 durante o texto (regra do dono 20/08)
+  // ">citação" sem espaço após o ">" também é markdown válido — aceitar ambos.
+  if (!/^>/m.test(codeStripped)) {
+    add('citation_blocks', 'Nenhuma citação em blockquote no artigo.');
+  }
+
+  // 15. Box "Em resumo" citável (GEO): H2 fixo com ≥ 3 bullets auto-contidos
+  const sections = codeStripped.split(/^##\s/gm);
+  const summary = sections.find(s => /^em resumo\s*$/im.test((s.split('\n')[0] ?? '').trim()));
+  if (!summary) {
+    add('summary_box', 'Falta o H2 "Em resumo" com bullets (box citável para IAs).');
+  } else {
+    const summaryBody = summary.replace(/^em resumo\s*$/im, '');
+    const bullets = summaryBody.split('\n').filter(l => /^\s*[-*]\s/.test(l));
+    if (bullets.length < 3) {
+      add('summary_box', 'H2 "Em resumo" com menos de 3 bullets.');
+    }
   }
 
   return { ok: issues.length === 0, issues };

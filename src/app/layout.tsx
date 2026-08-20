@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const gaMeasurementId = AUTOBLOG_PROFILE.integrations.googleAnalyticsMeasurementId;
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className="motion-safe:scroll-smooth">
       <body>
         {children}
         {gaMeasurementId && (

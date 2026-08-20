@@ -60,6 +60,23 @@ ao fim. Cada H2, exemplo e o fechamento reforçam essa única ideia — nada de 
 6. FECHAMENTO: recapitular a grande ideia em 1-2 frases, ANTECIPAR a principal
    objeção da persona e respondê-la, e terminar no CTA final com link de contato.
 
+## CITAÇÕES (autoridade + quebra de ritmo)
+- Inclua 1-2 citações durante o texto em blockquote markdown (linha iniciada com ">"),
+  cada uma com no máximo 3 parágrafos curtos, SEMPRE com a fonte atribuída
+  (nome real + veículo/cargo — nunca inventar pessoas nem frases; se não tiver
+  certeza da atribuição, prefira paráfrase com fonte de dado citada no texto).
+- Posicione a primeira citação após o 2º ou 3º bloco de conteúdo.
+
+## EM RESUMO (box citável para IAs — GEO)
+- H2 fixo "## Em resumo" imediatamente ANTES do fechamento, com 3 a 5 bullets.
+- Cada bullet é auto-contido: 1-2 frases que entregam a ideia por completo, sem
+  depender do resto do artigo — é o trecho que ferramentas de IA citam como resposta.
+
+## RESPOSTA DIRETA (GEO)
+- Logo após o lead, um parágrafo que responde por completo à pergunta central da
+  keyword, auto-contido: quem (ou qual IA) ler SÓ esse parágrafo entende o essencial
+  e a posição do artigo.
+
 ## REGRAS
 - Mínimo 2 sinais de E-E-A-T: experiência prática, dado de mercado com fonte,
   norma técnica, ou posicionamento honesto (reconhecer limitações quando verdadeiro).
@@ -143,6 +160,9 @@ CHECKLIST interno antes de gerar (valide cada item):
 - [ ] Nenhuma palavra do vocabulário proibido
 - [ ] Links internos com âncoras naturais distribuídos no texto
 - [ ] Ao menos 1 link externo real e relevante (nunca URL inventada; se não tiver certeza, omitir)
+- [ ] 1-2 citações em blockquote (linha ">") com fonte real atribuída, primeira após o 2º/3º bloco
+- [ ] Parágrafo de resposta direta auto-contido logo após o lead (GEO)
+- [ ] H2 "## Em resumo" antes do fechamento com 3-5 bullets auto-contidos (GEO)
 - [ ] CTA final com link de contato específico
 - [ ] ZERO markdown de imagem no content (sem ![]() )`;
 }
@@ -285,7 +305,11 @@ export async function generateArticleFromOutline(
   const user = `${buildUserPrompt(keyword, internalLinks, brief)}
 
 ## OUTLINE VALIDADO — siga esta estrutura EXATAMENTE (não invente outros H2s)
-${outlineText}`;
+${outlineText}
+
+## EXCEÇÃO OBRIGATÓRIA: além dos H2s do outline, inclua SEMPRE o H2 fixo
+"## Em resumo" com 3-5 bullets auto-contidos, imediatamente antes do fechamento
+(regra do system prompt — o outline não lista esse H2, mas ele é obrigatório).`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     const text = await askDeepseek(SYSTEM_PROMPT, user);

@@ -3,7 +3,9 @@
 // servidor tira o JS de markdown do bundle do cliente.
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSlug from 'rehype-slug';
 import { parseVideoEmbed, type VideoEmbed } from '@/lib/blog/video-embed';
+import { extractToc } from '@/lib/blog/toc';
 
 interface ArticleBodyProps {
   content: string;
@@ -58,14 +60,47 @@ const components = {
     }
     return <p>{children}</p>;
   },
+  // Citação em bloco diferenciado: borda na cor primária + fundo leve (regra do dono 20/08)
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className="not-italic my-8 pl-4 border-l-4 border-primary bg-primary/5 rounded-r-lg py-1">
+      {children}
+    </blockquote>
+  ),
 };
 
 export default function ArticleBody({ content }: ArticleBodyProps) {
+  // Sumário navegável por âncoras — gerado no código (slugs batem com os ids do rehype-slug)
+  const toc = extractToc(content);
+
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-heading prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-h2:text-muted-foreground prose-blockquote:not-italic [&_p]:text-justify">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-        {content}
-      </ReactMarkdown>
-    </div>
+    <>
+      {toc.length > 0 && (
+        <nav
+          aria-label="Sumário do artigo"
+          className="not-prose mb-10 p-5 rounded-2xl border border-border bg-card"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Neste artigo
+          </p>
+          <ul className="space-y-1 text-sm">
+            {toc.map(item => (
+              <li key={item.slug} className={item.depth === 3 ? 'pl-4' : ''}>
+                <a
+                  href={`#${item.slug}`}
+                  className="inline-block py-1 text-foreground/80 hover:text-primary transition-colors underline-offset-2 hover:underline"
+                >
+                  {item.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+      <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-display prose-headings:scroll-mt-24 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-h2:text-muted-foreground prose-blockquote:not-italic [&_p]:text-justify">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components}>
+          {content}
+        </ReactMarkdown>
+      </div>
+    </>
   );
 }
