@@ -10,6 +10,7 @@ import {
   generateArticle,
   generateArticleFromOutline,
   generateArticleOutline,
+  regenerateWithFeedback,
   type ArticleContent,
   type ArticleOutline,
   type InternalLink,
@@ -17,6 +18,7 @@ import {
 import { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } from '@/lib/blog/image-gen';
 import { injectBodyImages, injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
 import { validateArticle } from '@/lib/blog/validate';
+import { runQualityGateLoop } from '@/lib/blog/quality-gate';
 import { scoreInternalLinks } from '@/lib/blog/internal-links';
 import { distributeArticle, buildDistributionArticle } from '@/lib/blog/distribution';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
@@ -141,13 +143,39 @@ export async function GET(request: NextRequest) {
       : null;
     const contentWithCtas = injectInlineCtas(finalContentWithInfographic, cta);
 
+    // 3.8 Gate de qualidade por LLM (score 0-100, 5 categorias) — roda 100% em memória
+    //     porque insertArticle usa a RPC coesa_blog_insert_article, que não aceita
+    //     p_status (sempre insere published). Fail-open: sem ANTHROPIC_API_KEY o gate
+    //     é pulado e o pipeline publica normalmente. Reusa coverUrl/bodyImages/infographic
+    //     já gerados nas tentativas de regeneração — não regenera imagens. Publica de
+    //     qualquer forma ao final, mesmo se o score continuar abaixo de 90.
+    const gateResult = await runQualityGateLoop(
+      { article, content: contentWithCtas },
+      ({ article: a, content }) => `# ${a.title}\n\nMeta description: ${a.meta_desc}\n\n${content}`,
+      async ({ article: a }, issues) => {
+        console.warn('[blog/generate] Quality gate abaixo de 90 — regenerando:', issues);
+        const revised = await regenerateWithFeedback(a, issues);
+        const regenBody = injectBodyImages(revised.content, bodyImages);
+        const regenWithInfographic = injectInfographic(
+          regenBody,
+          infographicUrl ? { url: infographicUrl, alt: `${kw} — infográfico` } : null,
+        );
+        return { article: revised, content: injectInlineCtas(regenWithInfographic, cta) };
+      },
+    );
+    article = gateResult.content.article;
+    const finalContentWithCtas = gateResult.content.content;
+    if (!gateResult.judged.skipped) {
+      console.warn(`[blog/generate] Quality gate score final: ${gateResult.judged.score}`);
+    }
+
     // 4. Salvar artigo (com collision handling interno)
     const finalSlug = await insertArticle({
       slug: article.slug,
       title: article.title,
       page_title: article.page_title ?? null,
       meta_desc: article.meta_desc,
-      content: contentWithCtas,
+      content: finalContentWithCtas,
       cover_url: coverUrl,
       cover_alt: article.cover_alt ?? null,
       keyword,

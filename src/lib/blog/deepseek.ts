@@ -2,6 +2,7 @@
 import OpenAI from 'openai';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
 import { buildEditorialBriefSection, type EditorialBrief } from '@/lib/blog/editorial-calendar';
+import type { JudgeIssue } from '@/lib/blog/quality-gate';
 
 export interface ArticleContent {
   title: string;
@@ -210,6 +211,49 @@ export async function generateArticle(
   }
 
   throw new Error('deepseek_json_parse_failed');
+}
+
+// ---- Regeneração com feedback do quality gate LLM (src/lib/blog/quality-gate.ts) ----
+// Mesmo padrão da regeneração Yoast já existente na rota: reenvia o artigo completo,
+// mas aqui com as issues.fix_instruction do judge como instrução extra de correção.
+
+/**
+ * Revisa o artigo incorporando o feedback do quality gate LLM (score < 90).
+ * Reenvia o artigo completo + os problemas apontados; pede correção pontual,
+ * não reescrita do zero. Se a regeneração falhar (JSON inválido nas 2 tentativas),
+ * devolve o artigo original — o pipeline nunca quebra por causa do gate.
+ */
+export async function regenerateWithFeedback(
+  article: ArticleContent,
+  issues: JudgeIssue[],
+): Promise<ArticleContent> {
+  const feedback = issues
+    .map(i => `- [${i.severity}] (${i.category} — ${i.section}) ${i.problem}\n  Correção: ${i.fix_instruction}`)
+    .join('\n');
+
+  const user = `Revise o artigo abaixo corrigindo TODOS os problemas listados no feedback do revisor.
+Mantenha tudo que já está bom — não reescreva do zero, apenas corrija o que foi apontado.
+
+## ARTIGO ATUAL (JSON)
+${JSON.stringify(article)}
+
+## FEEDBACK DO REVISOR — corrija cada item
+${feedback}
+
+Retorne SOMENTE o JSON completo revisado, no MESMO formato do artigo atual (todos os
+campos: title, page_title, slug, meta_desc, image_prompt, cover_alt, category, content).
+Sem markdown ao redor, sem texto antes ou depois.`;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const text = await askDeepseek(SYSTEM_PROMPT, user);
+    const parsed = parseResponse(text);
+    if (parsed) return parsed;
+    if (attempt === 2) break;
+    console.warn(`[deepseek] Regeneração com feedback: tentativa ${attempt} retornou JSON inválido. Retentando...`);
+  }
+
+  console.warn('[deepseek] Regeneração com feedback falhou nas 2 tentativas — mantendo artigo anterior.');
+  return article;
 }
 
 // ---- Pipeline em 2 etapas (opcional, flag twoStageGenerationEnabled) ----

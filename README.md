@@ -41,3 +41,7 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Autoblog — gate de qualidade
+
+O pipeline de geração de posts (`src/app/api/blog/generate`) roda um gate de qualidade por LLM (score 0-100) depois do checklist on-page e antes de publicar; ele é opcional — sem `DEEPSEEK_API_KEY` o gate é pulado e o artigo publica normalmente.
