@@ -168,6 +168,34 @@ CHECKLIST interno antes de gerar (valide cada item):
 - [ ] ZERO markdown de imagem no content (sem ![]() )`;
 }
 
+// Campos de ArticleContent que são `string` (sem `?`) no tipo — logo obrigatórios em
+// runtime. Confirmado varrendo os consumidores downstream (route.ts, validate.ts,
+// image-gen.ts): nenhum deles tem `?? fallback`/optional chaining para estes campos.
+// Ausência ou string vazia aqui causa bug real: validateArticle chama
+// `title.length`/`metaDesc.length`/`content.replace(...)` sem guard (TypeError cru), e
+// route.ts interpola `image_prompt` em template literals sem `?.` — se faltar, vira a
+// STRING "undefined, wide establishing shot, no text", que passa pelo guard
+// `!prompt?.trim()` de generateAndUploadBodyImages (é truthy) e dispara uma chamada paga
+// ao gpt-image-1 com prompt lixo. `slug` é usado cru em paths de storage e na URL final.
+//
+// Os campos com `?` no tipo (page_title, cover_alt, category) SEMPRE têm `?? null` ou
+// `if (x)` no ponto de uso — por isso ficam de fora desta lista.
+//
+//⚠️ Ao adicionar um novo campo SEM `?` em ArticleContent, adicione o nome dele aqui
+// também. TS puro não deriva isso do tipo em runtime sem uma lib de schema (zod etc.) —
+// esta lista central substitui os `if (!parsed.campo)` soltos que cresciam um por bug.
+export const REQUIRED_FIELDS: (keyof ArticleContent)[] = [
+  'title',
+  'slug',
+  'meta_desc',
+  'image_prompt',
+  'content',
+];
+
+function isMissingOrEmpty(value: unknown): boolean {
+  return typeof value !== 'string' || value.trim().length === 0;
+}
+
 function parseResponse(text: string): ArticleContent | null {
   try {
     const cleaned = text
@@ -175,7 +203,7 @@ function parseResponse(text: string): ArticleContent | null {
       .replace(/\n?```$/m, '')
       .trim();
     const parsed = JSON.parse(cleaned);
-    if (!parsed.title || !parsed.slug || !parsed.content) return null;
+    if (REQUIRED_FIELDS.some(field => isMissingOrEmpty(parsed[field]))) return null;
     return parsed as ArticleContent;
   } catch {
     return null;
@@ -187,14 +215,23 @@ export async function generateArticle(
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleContent> {
+  // Timeout explícito: o default do SDK é 10min, bem acima do maxDuration=300s da rota
+  // de geração — sem isso, uma chamada travada é morta pelo platform timeout em vez de
+  // lançar um erro tratável, e o insertRunLog de erro no catch da rota nunca roda.
   const client = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
     baseURL: 'https://api.deepseek.com/v1',
+    timeout: 90_000,
+    maxRetries: 1,
   });
 
   for (let attempt = 1; attempt <= 2; attempt++) {
+    // 'deepseek-v4-flash' é o substituto oficial de 'deepseek-chat' (não-thinking) —
+    // a DeepSeek desativou os nomes legados 'deepseek-chat'/'deepseek-reasoner' em
+    // 2026-07-24 (anunciado 2026-04-24). Chamar com o nome antigo devolve erro do
+    // provider a cada tentativa, quebrando a geração de artigo silenciosamente.
     const response = await client.chat.completions.create({
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildUserPrompt(keyword, internalLinks, brief) },
@@ -245,7 +282,20 @@ campos: title, page_title, slug, meta_desc, image_prompt, cover_alt, category, c
 Sem markdown ao redor, sem texto antes ou depois.`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const text = await askDeepseek(SYSTEM_PROMPT, user);
+    // askDeepseek pode lançar (timeout do client de 90s, erro de rede) — sem este
+    // try/catch, o erro propaga por regenerate() dentro de runQualityGateLoop (que
+    // não tem catch próprio) e aborta o pipeline inteiro de publicação, quebrando
+    // o contrato documentado acima ("o pipeline nunca quebra por causa do gate").
+    let text: string;
+    try {
+      text = await askDeepseek(SYSTEM_PROMPT, user);
+    } catch (err) {
+      // return direto (não break): a mensagem genérica abaixo do loop diz "falhou nas 2
+      // tentativas", o que seria falso quando o erro de rede interrompe na 1ª tentativa —
+      // essa linha já loga a causa real, sem precisar da mensagem genérica de JSON inválido.
+      console.warn(`[deepseek] Regeneração com feedback: tentativa ${attempt} falhou (erro de rede/timeout) — mantendo artigo anterior.`, err);
+      return article;
+    }
     const parsed = parseResponse(text);
     if (parsed) return parsed;
     if (attempt === 2) break;
@@ -291,12 +341,18 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
 }
 
 async function askDeepseek(system: string, user: string): Promise<string> {
+  // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
+  // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
   const client = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
     baseURL: 'https://api.deepseek.com/v1',
+    timeout: 90_000,
+    maxRetries: 1,
   });
+  // Mesmo motivo do comentário em generateArticle: 'deepseek-v4-flash' substitui o
+  // nome legado 'deepseek-chat', desativado pela DeepSeek em 2026-07-24.
   const response = await client.chat.completions.create({
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },

@@ -97,7 +97,11 @@ function parseJudgeResult(raw: string): JudgeResult | null {
       .trim();
     const parsed = JSON.parse(cleaned);
 
-    if (typeof parsed.total_score !== 'number') return null;
+    // Number.isFinite exclui NaN/Infinity (JSON.parse aceita literais como 1e400 -> Infinity)
+    // e a faixa 0-100 é a única que faz sentido para a comparação `score < 90` do loop —
+    // um score fora da faixa é tratado como resposta malformada (fail-open), nunca clampado.
+    if (typeof parsed.total_score !== 'number' || !Number.isFinite(parsed.total_score)) return null;
+    if (parsed.total_score < 0 || parsed.total_score > 100) return null;
 
     const c = parsed.categories;
     if (
@@ -112,6 +116,27 @@ function parseJudgeResult(raw: string): JudgeResult | null {
     }
 
     if (!Array.isArray(parsed.issues)) return null;
+
+    // Cada issue vira, sem validação adicional, uma linha de feedback em
+    // regenerateWithFeedback (deepseek.ts): `i.severity`, `i.category`, `i.section`,
+    // `i.problem`, `i.fix_instruction` são acessados FORA do try/catch que blinda só a
+    // chamada de rede — um item malformado (ex.: null, ou faltando um campo) lança
+    // TypeError ali e quebra o pipeline, violando o mesmo contrato fail-open que o
+    // try/catch de erro de rede protege. Mesma rigidez já aplicada a total_score/
+    // categories: se algum item não tem a forma esperada, o JSON inteiro do judge é
+    // tratado como malformado (fail-open), nunca passado adiante pela metade.
+    const validSeverities = new Set<JudgeSeverity>(['P0', 'P1', 'P2']);
+    const issuesWellFormed = parsed.issues.every(
+      (issue: unknown) =>
+        typeof issue === 'object' &&
+        issue !== null &&
+        validSeverities.has((issue as JudgeIssue).severity) &&
+        typeof (issue as JudgeIssue).category === 'string' &&
+        typeof (issue as JudgeIssue).section === 'string' &&
+        typeof (issue as JudgeIssue).problem === 'string' &&
+        typeof (issue as JudgeIssue).fix_instruction === 'string',
+    );
+    if (!issuesWellFormed) return null;
 
     return {
       total_score: parsed.total_score,
@@ -143,7 +168,10 @@ export async function runQualityGate(articleContent: string): Promise<QualityGat
   }
 
   try {
-    const client = new OpenAI({ apiKey, baseURL: 'https://api.deepseek.com/v1' });
+    // Timeout explícito: o default do SDK é 10min (bem acima do maxDuration=300s da rota
+    // de geração) — sem isso, uma chamada travada não cai no fail-open, ela é morta pelo
+    // platform timeout, o catch nunca roda, e o insertRunLog de erro nunca é gravado.
+    const client = new OpenAI({ apiKey, baseURL: 'https://api.deepseek.com/v1', timeout: 60_000, maxRetries: 1 });
     const response = await client.chat.completions.create({
       model: 'deepseek-v4-pro',
       messages: [
@@ -197,13 +225,31 @@ export async function runQualityGateLoop<T>(
   maxAttempts = 2,
 ): Promise<QualityGateLoopResult<T>> {
   let content = initial;
+  let input = buildInput(content);
   let attempts = 0;
-  let judged = await runQualityGate(buildInput(content));
+  let judged = await runQualityGate(input);
 
-  while (!judged.skipped && judged.score !== null && judged.score < 90 && attempts < maxAttempts) {
+  // judged.issues.length > 0: score < 90 sem nenhuma issue não dá ao `regenerate` nada
+  // acionável para corrigir — regenerar sem instrução concreta é uma chamada de LLM
+  // desperdiçada que tende a devolver o artigo praticamente inalterado.
+  while (
+    !judged.skipped &&
+    judged.score !== null &&
+    judged.score < 90 &&
+    judged.issues.length > 0 &&
+    attempts < maxAttempts
+  ) {
     attempts++;
-    content = await regenerate(content, judged.issues);
-    judged = await runQualityGate(buildInput(content));
+    const newContent = await regenerate(content, judged.issues);
+    const newInput = buildInput(newContent);
+    content = newContent;
+    // Regeneração não mudou o texto julgado (ex.: regenerate falhou o parse e devolveu o
+    // conteúdo original) — julgar de novo o mesmo texto produziria o mesmo resultado.
+    // Parar aqui evita uma segunda chamada ao judge (e possíveis novas tentativas de
+    // regeneração) sobre um conteúdo idêntico ao já avaliado.
+    if (newInput === input) break;
+    input = newInput;
+    judged = await runQualityGate(input);
   }
 
   return { content, judged, attempts };
