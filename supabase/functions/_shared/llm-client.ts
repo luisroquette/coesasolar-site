@@ -24,8 +24,12 @@ let configLoadedAt = 0;
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Fallback defaults (used only if DB unavailable)
+// 'deepseek-v4-flash' é o substituto oficial de 'deepseek-chat' (não-thinking) — a
+// DeepSeek desativou o nome legado 'deepseek-chat' em 2026-07-24 (mesma causa raiz do
+// fix em src/lib/blog/deepseek.ts). Sem isso, este fallback (usado quando a config do
+// banco está indisponível ou vazia) chama um model id morto.
 const FALLBACK_CONFIG: LLMConfig = {
-  defaultModels: ['deepseek-chat'],
+  defaultModels: ['deepseek-v4-flash'],
   gatewayUrl: 'https://api.deepseek.com/v1/chat/completions',
   defaultTemperature: 0.7,
   defaultMaxTokens: 4096,

@@ -35,3 +35,6 @@ dist-ssr
 # artefato de ferramenta local, não é código
 .qlaude/
 tsconfig.tsbuildinfo
+
+# lockfile gerado por `deno test`/`deno check` local (edge functions) — nunca foi versionado
+deno.lock
