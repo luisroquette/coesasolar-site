@@ -67,7 +67,9 @@ function SetupGroup({ title, items }: { title: string; items: SetupItem[] }) {
 export default async function SetupPage() {
   const calendarReady = await tableExists('coesa_editorial_calendar');
   const commentsReady = await tableExists('coesa_blog_comments');
-  const metricsReady = await tableExists('coesa_blog_metrics');
+  // 24/08/2026: métricas saíram do Postgres pra Redis (Upstash) — não é mais
+  // uma migration de tabela, é presença das envs que a integração Vercel cria.
+  const metricsReady = envPresent('KV_REST_API_URL') && envPresent('KV_REST_API_TOKEN');
   const brokenLinksReady = await tableExists('coesa_blog_broken_links');
 
   const supabase =
@@ -205,9 +207,9 @@ export default async function SetupPage() {
               action: 'Aplicar a migration 005 no Supabase (SQL Editor).',
             },
             {
-              name: 'Métricas (006_blog_metrics)',
+              name: 'Métricas (Redis via `vercel install upstash/upstash-kv`)',
               ready: metricsReady,
-              action: 'Aplicar a migration 006 no Supabase (SQL Editor).',
+              action: 'Rodar `vercel install upstash/upstash-kv -e production` e conectar ao projeto.',
             },
             {
               name: 'Auditoria de links (007_blog_broken_links)',

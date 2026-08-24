@@ -1,6 +1,6 @@
 // REGRESSÃO: métricas — whitelist de eventos e sanitização de slug.
 import { describe, it, expect } from 'vitest';
-import { isValidMetricEvent, sanitizeSlug, isLikelyBot, METRIC_EVENTS, mergeMetricCounts } from './metrics';
+import { isValidMetricEvent, sanitizeSlug, isLikelyBot, METRIC_EVENTS, buildMetricsReport } from './metrics';
 
 describe('REGRESSÃO: métricas', () => {
   it('aceita somente os 4 eventos da whitelist', () => {
@@ -45,19 +45,34 @@ describe('REGRESSÃO: métricas', () => {
     expect(isLikelyBot(null)).toBe(false);
   });
 
-  // 24/08/2026: coesa_blog_metrics virou UNLOGGED com cron de retenção (apaga
-  // linhas com mais de 2 dias depois de agregar em coesa_blog_metrics_daily).
-  // Sem somar as duas fontes, a contagem exibida ao admin cairia pra zero
-  // conforme o bruto fosse apagado — "ausência tratada como zero".
-  it('mergeMetricCounts soma bruto + rollup diário, nunca perde contagem', () => {
-    expect(mergeMetricCounts(5, [{ count: 10 }, { count: 3 }])).toBe(18);
+  // 24/08/2026: métricas migraram de Postgres (1 linha por evento, sem TTL —
+  // violava a regra de dado volátil do CLAUDE.md) para contadores Redis
+  // (Upstash). buildMetricsReport nunca deve afirmar 0 quando o Redis não
+  // respondeu (null) — teria que ser distinguível de "realmente zero eventos".
+  // Aqui o contrato é: ausência (null) vira 0 na exibição de propósito (é uma
+  // contagem cumulativa, não um booleano de "existe dado") — mas nunca lança
+  // nem quebra o relatório.
+  it('buildMetricsReport soma contagens presentes', () => {
+    const report = buildMetricsReport(
+      { view: 10, scroll50: 4, end: 2, cta: 3 },
+      { padrao: 3 },
+    );
+    expect(report).toEqual({ view: 10, scroll50: 4, end: 2, cta: 3, ctaByVariant: { padrao: 3 } });
   });
 
-  it('mergeMetricCounts com rollup vazio (linhas ainda não migradas) usa só o bruto', () => {
-    expect(mergeMetricCounts(7, [])).toBe(7);
+  it('buildMetricsReport trata null (chave nunca incrementada) como zero', () => {
+    const report = buildMetricsReport(
+      { view: null, scroll50: null, end: null, cta: null },
+      {},
+    );
+    expect(report).toEqual({ view: 0, scroll50: 0, end: 0, cta: 0, ctaByVariant: {} });
   });
 
-  it('mergeMetricCounts com bruto zerado (tudo já migrado pro rollup) usa só o rollup', () => {
-    expect(mergeMetricCounts(0, [{ count: 42 }])).toBe(42);
+  it('buildMetricsReport mistura variantes com e sem contagem ainda', () => {
+    const report = buildMetricsReport(
+      { view: 1, scroll50: 0, end: 0, cta: 2 },
+      { a: 1, b: null },
+    );
+    expect(report.ctaByVariant).toEqual({ a: 1, b: 0 });
   });
 });

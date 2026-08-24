@@ -76,8 +76,8 @@ export const AUTOBLOG_PROFILE = {
     googleSearchConsoleEnabled: false,
     imageGenerationEnabled: true,
     // GA4 do site inteiro (layout): o ID oficial da Coesa Solar. Vazio desligaria
-    // o gtag global — as métricas próprias da tabela coesa_blog_metrics continuam
-    // funcionando de forma independente.
+    // o gtag global — as métricas próprias (Redis/Upstash, ver src/lib/blog/metrics.ts)
+    // continuam funcionando de forma independente.
     googleAnalyticsMeasurementId: 'G-TKZQ0VXJ61',
     // Opcional: gera outline validado antes do corpo (RD recomenda planejar antes de escrever).
     // Custo: 1 chamada extra de LLM por artigo.
