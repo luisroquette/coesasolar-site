@@ -1,9 +1,12 @@
 // Blog do coesasolar.com.br: tabelas prefixadas coesa_* no schema public
-// de um Supabase DEDICADO ao coesasolar (projeto pwxqcfmrmxmwxgqkvdui).
-// Ate 24/08/2026 dividia banco com o CF Gauss (projeto fvyknyvetpbxtdagrxqr)
-// — desacoplado por decisao do dono (coesasolar nao tem nada a ver com
-// cfgauss). Schema, RPCs e os 6 artigos publicados foram migrados 1:1;
-// prefixo coesa_ mantido de proposito so pra nao precisar tocar em codigo.
+// de um Supabase DEDICADO ao coesasolar (projeto sapsikmekwfwcnpyvzed,
+// regiao sa-east-1 — Sao Paulo, menor latencia do Brasil). Ate 24/08/2026
+// dividia banco com o CF Gauss (fvyknyvetpbxtdagrxqr) — desacoplado por
+// decisao do dono (coesasolar nao tem nada a ver com cfgauss). Um projeto
+// intermediario (pwxqcfmrmxmwxgqkvdui, us-east-2) existiu por ~1h antes
+// de ser recriado na regiao certa. Schema, RPCs e os 6 artigos publicados
+// foram migrados 1:1 e verificados por hash MD5; prefixo coesa_ mantido de
+// proposito so pra nao precisar tocar em codigo.
 //
 // Escritas do pipeline (artigo diário + run log) usam RPCs SECURITY DEFINER
 // (coesa_blog_claim_run / coesa_blog_insert_article / coesa_blog_insert_run_log)
