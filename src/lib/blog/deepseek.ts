@@ -301,16 +301,28 @@ Título desta seção (H2): ${section.h2}
 Instrução: ${section.content_brief}
 Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cobrir o brief).`;
 
-  const response = await client.chat.completions.create({
-    model: 'deepseek-v4-flash',
-    messages: [
-      { role: 'system', content: SECTION_SYSTEM_PROMPT },
-      { role: 'user', content: user },
-    ],
-    temperature: 0.7,
-    max_tokens: maxTokensForSection(section.word_target),
-  });
-  return response.choices[0]?.message?.content?.trim() ?? '';
+  // ACHADO 25/08/2026 (teste E2E real): 1 de 8 seções voltou vazia (mesma armadilha de
+  // reasoning_content do deepseek-v4-flash, ver reference_deepseek_v4_reasoning_gotchas.md) —
+  // sem retry, essa seção publicava com H2 e nenhum corpo. 2 tentativas (mesmo padrão de
+  // generateArticleStructure/generateArticle), nunca lança — retorna vazio no pior caso, o
+  // pipeline segue publicável (mesmo contrato de antes).
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const response = await client.chat.completions.create({
+      model: 'deepseek-v4-flash',
+      messages: [
+        { role: 'system', content: SECTION_SYSTEM_PROMPT },
+        { role: 'user', content: user },
+      ],
+      temperature: 0.7,
+      max_tokens: maxTokensForSection(section.word_target),
+    });
+    const text = response.choices[0]?.message?.content?.trim() ?? '';
+    if (text) return text;
+    if (attempt === 2) break;
+    console.warn(`[deepseek] Seção "${section.h2}" voltou vazia na tentativa ${attempt}. Retentando...`);
+  }
+  console.warn(`[deepseek] Seção "${section.h2}" voltou vazia nas 2 tentativas — publicando sem corpo nesta seção.`);
+  return '';
 }
 
 // ---- Montagem: estrutura + seções + FAQ + slots de imagem -> ArticleContent ----

@@ -270,6 +270,28 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     expect(args.max_tokens).toBeGreaterThanOrEqual(1200); // ~2 tokens/palavra PT-BR de folga
     expect(args.model).toBe('deepseek-v4-flash');
   });
+
+  it('REGRESSÃO 25/08/2026 (achado E2E: 1 de 8 seções voltou vazia em produção): retenta 1x se vier vazio', async () => {
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: '' } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: 'Corpo real na 2ª tentativa.' } }] });
+
+    const body = await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
+
+    expect(body).toBe('Corpo real na 2ª tentativa.');
+    expect(createMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('vazio nas 2 tentativas: devolve string vazia, nunca lança (pipeline segue publicável)', async () => {
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: '' } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: '' } }] });
+
+    const body = await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
+
+    expect(body).toBe('');
+    expect(createMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure nunca depende do default de max_tokens da API', () => {
