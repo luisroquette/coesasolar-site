@@ -255,3 +255,13 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
     expect(parseStructure('não é json')).toBeNull();
   });
 });
+
+describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default de max_tokens da API', () => {
+  it('max_tokens é explícito e proporcional ao word_target', async () => {
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: 'Corpo da seção.' } }] });
+    await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
+    const args = createMock.mock.calls[0][0];
+    expect(args.max_tokens).toBeGreaterThanOrEqual(1200); // ~2 tokens/palavra PT-BR de folga
+    expect(args.model).toBe('deepseek-v4-flash');
+  });
+});

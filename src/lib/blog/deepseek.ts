@@ -228,6 +228,56 @@ export async function generateArticleStructure(
   throw new Error('deepseek_structure_failed');
 }
 
+// Chamada por SEÇÃO — nunca o artigo inteiro numa resposta só. generateArticle/
+// regenerateWithFeedback não definem max_tokens, dependendo do default da API — viável pra
+// 1500-2500 palavras, arriscado pra 4500+ (resposta truncada quebra o JSON.parse silenciosamente).
+// max_tokens aqui é EXPLÍCITO e generoso: ~2.2 tokens por palavra em PT-BR + margem de formatação.
+function maxTokensForSection(wordTarget: number): number {
+  return Math.ceil(wordTarget * 2.2) + 200;
+}
+
+const SECTION_SYSTEM_PROMPT = `Você redige UMA SEÇÃO de um blogpost para ${brand.name} (${brand.siteUrl}).
+${editorial.businessDescription}. Público: ${editorial.audience}. Português brasileiro.
+Persona: ${editorial.persona}. Tom: ${editorial.tone}.
+
+Escreva SOMENTE o corpo desta seção em markdown — SEM o título H2 (será adicionado por fora),
+SEM front-matter, SEM comentários. Regras:
+- Parágrafos máx 4 linhas, uma ideia por parágrafo.
+- Bullets/listas e tabelas markdown quando o conteúdo permitir (simplificação visual).
+- Dados concretos > percentuais vagos ("R$ 3.200/mês" em vez de "até 40%").
+- Vocabulário proibido: "solução inovadora", "cada vez mais", "é importante ressaltar",
+  "de acordo com especialistas", "no contexto atual", "vários"/"alguns" sem número.
+- ZERO markdown de imagem (sem ![]()) — a imagem é inserida por fora.`;
+
+export async function writeSection(
+  keyword: string,
+  section: ArticleSection,
+  sectionIndex: number,
+  totalSections: number,
+): Promise<string> {
+  const client = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: 'https://api.deepseek.com/v1',
+    timeout: 90_000,
+    maxRetries: 1,
+  });
+  const user = `Tema geral do artigo: "${keyword}" (seção ${sectionIndex + 1} de ${totalSections}).
+Título desta seção (H2): ${section.h2}
+Instrução: ${section.content_brief}
+Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cobrir o brief).`;
+
+  const response = await client.chat.completions.create({
+    model: 'deepseek-v4-flash',
+    messages: [
+      { role: 'system', content: SECTION_SYSTEM_PROMPT },
+      { role: 'user', content: user },
+    ],
+    temperature: 0.7,
+    max_tokens: maxTokensForSection(section.word_target),
+  });
+  return response.choices[0]?.message?.content?.trim() ?? '';
+}
+
 function buildUserPrompt(
   keyword: string,
   internalLinks: InternalLink[],
