@@ -283,11 +283,27 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
 // montado ANTES disso. Solução: cada seção termina com um placeholder <!-- IMG_SLOT:N -->,
 // substituído por injectSectionImages assim que as N imagens já estiverem hospedadas.
 
+/** Monta o markdown final (seções + FAQ) a partir da estrutura e dos corpos já escritos —
+ *  extraída para ser reusada por regenerateSectionsWithFeedback (Task 4), que reescreve só
+ *  os `bodies` das seções com issue e precisa remontar o mesmo content. */
+export function assembleArticleMarkdown(structure: ArticleStructure, bodies: string[]): string {
+  const sectionsMd = structure.sections
+    .map((s, i) => `## ${s.h2}\n\n${bodies[i]}\n\n<!-- IMG_SLOT:${i} -->`)
+    .join('\n\n');
+
+  const faqMd = [
+    '## Perguntas Frequentes',
+    ...structure.faq.map(f => `### ${f.question}\n\n${f.answer}`),
+  ].join('\n\n');
+
+  return `${sectionsMd}\n\n${faqMd}`;
+}
+
 export async function generateArticleWithSections(
   keyword: string,
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
-): Promise<ArticleContent & { sectionImagePrompts: string[] }> {
+): Promise<ArticleContent & { sectionImagePrompts: string[]; structure: ArticleStructure; bodies: string[] }> {
   const structure = await generateArticleStructure(keyword, internalLinks, brief);
 
   // Seções em lotes de 3 (mesmo espírito do "batch de 3" que o cfgauss usa pra geração de
@@ -301,16 +317,7 @@ export async function generateArticleWithSections(
     bodies.push(...batchBodies);
   }
 
-  const sectionsMd = structure.sections
-    .map((s, i) => `## ${s.h2}\n\n${bodies[i]}\n\n<!-- IMG_SLOT:${i} -->`)
-    .join('\n\n');
-
-  const faqMd = [
-    '## Perguntas Frequentes',
-    ...structure.faq.map(f => `### ${f.question}\n\n${f.answer}`),
-  ].join('\n\n');
-
-  const content = `${sectionsMd}\n\n${faqMd}`;
+  const content = assembleArticleMarkdown(structure, bodies);
 
   return {
     title: structure.title,
@@ -322,7 +329,48 @@ export async function generateArticleWithSections(
     category: structure.category,
     content,
     sectionImagePrompts: structure.sections.map(s => s.image_prompt),
+    structure,
+    bodies,
   };
+}
+
+/**
+ * Regenera SÓ as seções citadas nas issues do quality gate (`i.section` casa com `h2`),
+ * remontando o content com assembleArticleMarkdown. Evita reenviar o artigo inteiro numa
+ * chamada (o mesmo risco de truncamento que motivou a Task 2) — só a(s) seção(ões) com
+ * problema é(são) reescrita(s); as demais ficam intactas. Issue sem seção correspondente
+ * na estrutura é ignorada (findIndex -1, filtrado); nenhuma seção acionável = no-op, mesmo
+ * contrato de regenerateWithFeedback (nunca lança, sempre devolve algo publicável).
+ */
+export async function regenerateSectionsWithFeedback(
+  keyword: string,
+  structure: ArticleStructure,
+  currentBodies: string[],
+  issues: JudgeIssue[],
+): Promise<string[]> {
+  const secoesComIssue = new Set(
+    issues.map(i => structure.sections.findIndex(s => s.h2 === i.section)).filter(idx => idx >= 0),
+  );
+  if (secoesComIssue.size === 0) return currentBodies;
+
+  const novos = [...currentBodies];
+  for (const idx of secoesComIssue) {
+    const fixInstruction = issues
+      .filter(i => i.section === structure.sections[idx]!.h2)
+      .map(i => i.fix_instruction)
+      .join(' ');
+    const secaoAjustada: ArticleSection = {
+      ...structure.sections[idx]!,
+      content_brief: `${structure.sections[idx]!.content_brief}\n\nCORREÇÃO OBRIGATÓRIA: ${fixInstruction}`,
+    };
+    try {
+      novos[idx] = await writeSection(keyword, secaoAjustada, idx, structure.sections.length);
+    } catch {
+      // mesma filosofia de regenerateWithFeedback: falha na regeneração mantém o
+      // conteúdo anterior daquela seção, nunca quebra o pipeline.
+    }
+  }
+  return novos;
 }
 
 /** Substitui os placeholders <!-- IMG_SLOT:N --> pelas imagens já geradas/hospedadas.

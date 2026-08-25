@@ -22,6 +22,8 @@ const {
   writeSection,
   generateArticleWithSections,
   injectSectionImages,
+  regenerateSectionsWithFeedback,
+  assembleArticleMarkdown,
 } = await import('./deepseek');
 
 const ARTICLE = {
@@ -305,5 +307,76 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
     const out = injectSectionImages(content, [{ url: 'https://x/a.webp', alt: 'a' }, null]);
     expect(out).toContain('![a](https://x/a.webp)');
     expect(out).not.toContain('IMG_SLOT');
+  });
+});
+
+describe('REGRESSÃO checklist 25/08/2026: regenerateSectionsWithFeedback só reescreve seção com issue', () => {
+  beforeEach(() => createMock.mockReset());
+
+  const ESTRUTURA_3_SECOES = {
+    title: 'Financiamento Solar 2026',
+    page_title: 'Financiamento Solar',
+    slug: 'financiamento-solar',
+    meta_desc: 'meta',
+    cover_image_prompt: 'cover',
+    cover_alt: 'alt',
+    category: 'guias',
+    sections: [
+      { h2: 'Seção 1', content_brief: 'brief 1', word_target: 400, image_prompt: 'p1' },
+      { h2: 'Seção 2', content_brief: 'brief 2', word_target: 400, image_prompt: 'p2' },
+      { h2: 'Seção 3', content_brief: 'brief 3', word_target: 400, image_prompt: 'p3' },
+    ],
+    faq: [],
+  };
+  const BODIES_ATUAIS = ['Corpo original 1', 'Corpo original 2', 'Corpo original 3'];
+
+  it('reescreve só a seção citada na issue, mantém as outras intactas', async () => {
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: 'Corpo revisado 2' } }] });
+
+    const novos = await regenerateSectionsWithFeedback('financiamento solar', ESTRUTURA_3_SECOES, BODIES_ATUAIS, [
+      { severity: 'P1', category: 'seo', section: 'Seção 2', problem: 'fraco', fix_instruction: 'aprofundar' },
+    ]);
+
+    expect(novos[0]).toBe('Corpo original 1');
+    expect(novos[1]).toBe('Corpo revisado 2');
+    expect(novos[2]).toBe('Corpo original 3');
+    expect(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('issue sem seção correspondente na estrutura: no-op, nunca chama a API', async () => {
+    const novos = await regenerateSectionsWithFeedback('financiamento solar', ESTRUTURA_3_SECOES, BODIES_ATUAIS, [
+      { severity: 'P1', category: 'seo', section: 'Seção inexistente', problem: 'x', fix_instruction: 'y' },
+    ]);
+
+    expect(novos).toBe(BODIES_ATUAIS);
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('regeneração da seção falha (erro de rede): mantém o corpo anterior daquela seção, não quebra', async () => {
+    createMock.mockRejectedValueOnce(new Error('timeout'));
+
+    const novos = await regenerateSectionsWithFeedback('financiamento solar', ESTRUTURA_3_SECOES, BODIES_ATUAIS, [
+      { severity: 'P1', category: 'seo', section: 'Seção 1', problem: 'fraco', fix_instruction: 'aprofundar' },
+    ]);
+
+    expect(novos[0]).toBe('Corpo original 1'); // writeSection lança, catch mantém o anterior
+    expect(novos[1]).toBe('Corpo original 2');
+    expect(novos[2]).toBe('Corpo original 3');
+  });
+});
+
+describe('REGRESSÃO checklist 25/08/2026: assembleArticleMarkdown é reusada por generateArticleWithSections e pelo re-montador do gate', () => {
+  it('mesma saída para as mesmas structure+bodies (determinístico, sem chamada de rede)', () => {
+    const structure = {
+      title: 't', page_title: 't', slug: 's', meta_desc: 'm', cover_image_prompt: 'c',
+      cover_alt: 'a', category: 'cat',
+      sections: [{ h2: 'H2 único', content_brief: 'b', word_target: 100, image_prompt: 'p' }],
+      faq: [{ question: 'Pergunta?', answer: 'Resposta.' }],
+    };
+    const md1 = assembleArticleMarkdown(structure, ['corpo']);
+    const md2 = assembleArticleMarkdown(structure, ['corpo']);
+    expect(md1).toBe(md2);
+    expect(md1).toContain('<!-- IMG_SLOT:0 -->');
+    expect(md1).toContain('## Perguntas Frequentes');
   });
 });

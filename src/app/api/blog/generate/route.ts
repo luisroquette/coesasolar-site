@@ -7,16 +7,15 @@ import { claimBlogRunToday, insertArticle, insertRunLog, getPublishedKeywords, g
 import { getNextPlannedEntry, markPublished, saveOutlineStructure, type EditorialBrief } from '@/lib/blog/editorial-calendar';
 import { fetchTopKeyword } from '@/lib/blog/gsc';
 import {
-  generateArticle,
-  generateArticleFromOutline,
-  generateArticleOutline,
-  regenerateWithFeedback,
+  generateArticleWithSections,
+  assembleArticleMarkdown,
+  regenerateSectionsWithFeedback,
+  injectSectionImages,
   type ArticleContent,
-  type ArticleOutline,
   type InternalLink,
 } from '@/lib/blog/deepseek';
 import { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } from '@/lib/blog/image-gen';
-import { injectBodyImages, injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
+import { injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
 import { validateArticle } from '@/lib/blog/validate';
 import { runQualityGateLoop } from '@/lib/blog/quality-gate';
 import { scoreInternalLinks } from '@/lib/blog/internal-links';
@@ -77,8 +76,15 @@ export async function GET(request: NextRequest) {
     }
     const internalLinks = [...profileLinks, ...dynamicLinks];
 
-    // 2. Gerar artigo + validar checklist on-page (Yoast-style).
+    // 2. Gerar artigo (motor por seções, checklist 25/08/2026 — estrutura 7-9 H2s + FAQ-7,
+    //    1 chamada por seção com max_tokens explícito, nunca o artigo inteiro numa chamada
+    //    só) + validar checklist on-page (Yoast-style).
     //    Falhou → regenera UMA vez; falhou de novo → publica com avisos no response.
+    //    NOTA: substitui os dois caminhos antigos (generateArticle de chamada única e o
+    //    outline-then-body de generateArticleFromOutline, hoje atrás da flag
+    //    twoStageGenerationEnabled=false) — generateArticleWithSections já faz outline
+    //    internamente (a estrutura) antes de escrever, cobrindo o propósito da flag com o
+    //    limite de tokens por seção que a chamada única não tinha.
     const validate = (a: ArticleContent) =>
       validateArticle({
         keyword: kw,
@@ -93,25 +99,14 @@ export async function GET(request: NextRequest) {
         allowedCategories: AUTOBLOG_PROFILE.editorial.categories.map(c => c.slug),
       });
 
-    // 2 etapas (opcional): outline validado primeiro, depois o corpo — RD recomenda
-    const twoStage = AUTOBLOG_PROFILE.integrations.twoStageGenerationEnabled;
-    let outline: ArticleOutline | null = null;
-    let article: ArticleContent;
-    if (twoStage) {
-      outline = await generateArticleOutline(kw);
-      // Guarda a estrutura aprovada na pauta do calendário (no-op se a keyword veio do seed)
-      await saveOutlineStructure(kw, JSON.stringify(outline)).catch(() => {});
-      article = await generateArticleFromOutline(kw, outline, internalLinks, brief);
-    } else {
-      article = await generateArticle(kw, internalLinks, brief);
-    }
+    let article = await generateArticleWithSections(kw, internalLinks, brief);
+    // Guarda a estrutura aprovada na pauta do calendário (no-op se a keyword veio do seed)
+    await saveOutlineStructure(kw, JSON.stringify(article.structure)).catch(() => {});
 
     let report = validate(article);
     if (!report.ok) {
       console.warn('[blog/generate] Checklist on-page falhou — regenerando:', report.issues);
-      article = twoStage && outline
-        ? await generateArticleFromOutline(kw, outline, internalLinks, brief)
-        : await generateArticle(kw, internalLinks, brief);
+      article = await generateArticleWithSections(kw, internalLinks, brief);
       report = validate(article);
     }
     const warnings = report.ok ? [] : report.issues;
@@ -119,16 +114,11 @@ export async function GET(request: NextRequest) {
     // 3. Gerar imagem de capa (falha silenciosa — não bloqueia publicação)
     const coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
 
-    // 3.5 Imagens do corpo: 1-2 quebrando o texto, alt com keyword (flag imageGenerationEnabled)
-    const bodyImages = await generateAndUploadBodyImages(
-      [
-        `${article.image_prompt}, wide establishing shot, no text`,
-        `${article.image_prompt}, detail close-up, no text`,
-      ],
-      article.slug,
-      kw,
-    );
-    const finalContent = injectBodyImages(article.content, bodyImages);
+    // 3.5 Imagens do corpo: 1 por seção (7-9), alt com keyword (flag imageGenerationEnabled).
+    //     generateAndUploadBodyImages preserva posição (null nas falhas) — sectionImages[i]
+    //     sempre corresponde à seção i, mesmo se uma imagem no meio da lista falhar.
+    const sectionImages = await generateAndUploadBodyImages(article.sectionImagePrompts, article.slug, kw);
+    const finalContent = injectSectionImages(article.content, sectionImages);
 
     // 3.6 Infográfico (flag infographicsEnabled): resumo visual antes do fechamento
     const infographicUrl = await generateAndUploadInfographic(article.image_prompt, article.slug);
@@ -145,17 +135,20 @@ export async function GET(request: NextRequest) {
 
     // 3.8 Gate de qualidade por LLM (score 0-100, 5 categorias) — roda 100% em memória
     //     porque insertArticle usa a RPC coesa_blog_insert_article, que não aceita
-    //     p_status (sempre insere published). Fail-open: sem ANTHROPIC_API_KEY o gate
-    //     é pulado e o pipeline publica normalmente. Reusa coverUrl/bodyImages/infographic
-    //     já gerados nas tentativas de regeneração — não regenera imagens. Publica de
-    //     qualquer forma ao final, mesmo se o score continuar abaixo de 90.
+    //     p_status (sempre insere published). Fail-open: sem DEEPSEEK_API_KEY o gate
+    //     é pulado e o pipeline publica normalmente. Reusa coverUrl/sectionImages/infographic
+    //     já gerados — não regenera imagens, só reescreve as seções com issue
+    //     (regenerateSectionsWithFeedback, nunca o artigo inteiro numa chamada — mesmo motivo
+    //     da Task 2). Publica de qualquer forma ao final, mesmo se o score continuar < 90.
     const gateResult = await runQualityGateLoop(
       { article, content: contentWithCtas },
       ({ article: a, content }) => `# ${a.title}\n\nMeta description: ${a.meta_desc}\n\n${content}`,
       async ({ article: a }, issues) => {
         console.warn('[blog/generate] Quality gate abaixo de 90 — regenerando:', issues);
-        const revised = await regenerateWithFeedback(a, issues);
-        const regenBody = injectBodyImages(revised.content, bodyImages);
+        const newBodies = await regenerateSectionsWithFeedback(kw, a.structure, a.bodies, issues);
+        const newContent = assembleArticleMarkdown(a.structure, newBodies);
+        const revised = { ...a, bodies: newBodies, content: newContent };
+        const regenBody = injectSectionImages(newContent, sectionImages);
         const regenWithInfographic = injectInfographic(
           regenBody,
           infographicUrl ? { url: infographicUrl, alt: `${kw} — infográfico` } : null,

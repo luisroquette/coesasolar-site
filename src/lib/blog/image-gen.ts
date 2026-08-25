@@ -76,25 +76,29 @@ export async function generateAndUploadInfographic(
   }
 }
 
-/** 1-2 imagens para o corpo do artigo, com alt por keyword (quebram o texto). */
+/** N imagens para o corpo do artigo (1 por seção), com alt por keyword. `null` na posição i
+ *  = aquele prompt/upload falhou — preserva o índice (nunca `.push` só no sucesso) para que
+ *  quem consome o array por posição (ex.: injectSectionImages) não desalinhe imagem×seção
+ *  quando uma falha no meio da lista. */
 export async function generateAndUploadBodyImages(
   prompts: string[],
   slug: string,
   keyword: string,
-): Promise<Array<{ url: string; alt: string }>> {
-  if (!AUTOBLOG_PROFILE.integrations.imageGenerationEnabled) return [];
+): Promise<Array<{ url: string; alt: string } | null>> {
+  if (!AUTOBLOG_PROFILE.integrations.imageGenerationEnabled) return prompts.map(() => null);
 
-  const results: Array<{ url: string; alt: string }> = [];
+  const results: Array<{ url: string; alt: string } | null> = [];
   for (let i = 0; i < prompts.length; i++) {
-    if (!prompts[i]?.trim()) continue; // prompt vazio = chamada paga desperdiçada
+    if (!prompts[i]?.trim()) { results.push(null); continue; } // prompt vazio = chamada paga desperdiçada
     try {
       const b64 = await generateImageB64(prompts[i]);
-      if (!b64) continue;
+      if (!b64) { results.push(null); continue; }
       const webp = await optimizeToWebp(Buffer.from(b64, 'base64'));
       const url = await uploadImageToStorage(`${slug}-body-${i + 1}.webp`, webp, 'image/webp');
-      if (url) results.push({ url, alt: `${keyword} — ilustração ${i + 1}` });
+      results.push(url ? { url, alt: `${keyword} — ilustração ${i + 1}` } : null);
     } catch (err) {
       console.warn(`[image-gen] Imagem ${i + 1} do corpo falhou (não bloqueia publicação):`, err);
+      results.push(null);
     }
   }
   return results;
