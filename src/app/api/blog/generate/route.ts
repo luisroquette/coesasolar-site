@@ -11,6 +11,7 @@ import {
   assembleArticleMarkdown,
   regenerateSectionsWithFeedback,
   injectSectionImages,
+  fixSimpleValidationIssues,
   type ArticleContent,
   type InternalLink,
 } from '@/lib/blog/deepseek';
@@ -108,10 +109,14 @@ export async function GET(request: NextRequest) {
 
     let report = validate(article);
     if (!report.ok) {
-      console.warn('[blog/generate] Checklist on-page falhou — regenerando:', report.issues);
-      article = await generateArticleWithSections(kw, internalLinks, brief);
-      lap('regeração completa (checklist falhou)');
+      // ACHADO 25/08/2026: regenerar o ARTIGO INTEIRO aqui (chamada completa, ~190s)
+      // é o que fazia o pipeline estourar maxDuration=300s na 2ª rodada — mesmo quando
+      // só sobrava 1-2 issues pequenas. Fix determinístico primeiro (instantâneo, sem
+      // custo de LLM); o que sobrar publica com aviso (fail-open, nunca bloqueia).
+      console.warn('[blog/generate] Checklist on-page falhou — aplicando fix determinístico:', report.issues);
+      article = fixSimpleValidationIssues(article, kw, report.issues.map(i => i.rule));
       report = validate(article);
+      lap('fix determinístico do checklist aplicado');
     }
     const warnings = report.ok ? [] : report.issues;
 

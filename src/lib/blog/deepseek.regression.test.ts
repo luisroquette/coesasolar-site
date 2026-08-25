@@ -23,6 +23,7 @@ const {
   generateArticleWithSections,
   injectSectionImages,
   enrichSectionBriefs,
+  fixSimpleValidationIssues,
   regenerateSectionsWithFeedback,
   assembleArticleMarkdown,
   generateArticleStructure,
@@ -466,5 +467,44 @@ describe('REGRESSÃO 25/08/2026 (achado E2E): enrichSectionBriefs injeta obriga�
     const original = JSON.parse(JSON.stringify(SECOES_7));
     enrichSectionBriefs(SECOES_7, 'placa solar', LINKS);
     expect(SECOES_7).toEqual(original);
+  });
+});
+
+describe('REGRESSÃO 25/08/2026 (achado E2E): fixSimpleValidationIssues corrige sem chamar o LLM de novo', () => {
+  const ARTICLE_BASE = {
+    title: 'Como Escolher Placa Solar',
+    slug: 'como-escolher-placa-solar',
+    meta_desc: 'Guia completo com critérios práticos para escolher',
+    image_prompt: 'p',
+    cover_alt: 'Painel solar instalado em telhado residencial',
+    content: 'conteúdo',
+  };
+
+  it('meta_keyword: prepend a keyword quando ausente da meta_desc', () => {
+    const fixed = fixSimpleValidationIssues(ARTICLE_BASE, 'placa solar', ['meta_keyword']);
+    expect(fixed.meta_desc.toLowerCase()).toContain('placa solar');
+    expect(fixed.meta_desc.length).toBeLessThanOrEqual(155);
+  });
+
+  it('cover_alt_keyword: acrescenta a keyword quando ausente do alt da capa', () => {
+    const fixed = fixSimpleValidationIssues(ARTICLE_BASE, 'placa solar', ['cover_alt_keyword']);
+    expect(fixed.cover_alt!.toLowerCase()).toContain('placa solar');
+  });
+
+  it('issue não coberta (ex.: citation_blocks): não mexe no artigo, nunca inventa conteúdo', () => {
+    const fixed = fixSimpleValidationIssues(ARTICLE_BASE, 'placa solar', ['citation_blocks']);
+    expect(fixed).toEqual(ARTICLE_BASE);
+  });
+
+  it('campo já correto: no-op, não duplica a keyword', () => {
+    const jaCorreto = { ...ARTICLE_BASE, meta_desc: 'Placa solar: guia completo com critérios' };
+    const fixed = fixSimpleValidationIssues(jaCorreto, 'placa solar', ['meta_keyword']);
+    expect(fixed.meta_desc).toBe(jaCorreto.meta_desc); // já continha, condição não dispara
+  });
+
+  it('meta_desc muito longa após o fix é truncada em 155 chars', () => {
+    const longa = { ...ARTICLE_BASE, meta_desc: 'x'.repeat(150) };
+    const fixed = fixSimpleValidationIssues(longa, 'financiamento de energia solar residencial', ['meta_keyword']);
+    expect(fixed.meta_desc.length).toBeLessThanOrEqual(155);
   });
 });

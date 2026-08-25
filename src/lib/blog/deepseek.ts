@@ -467,6 +467,33 @@ export function injectSectionImages(content: string, images: Array<{ url: string
   });
 }
 
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/**
+ * Corrige DETERMINISTICAMENTE (sem chamar o LLM de novo) as issues do checklist on-page
+ * que dão pra resolver por concatenação simples de texto — meta_keyword e cover_alt_keyword.
+ * ACHADO 25/08/2026: a rota antiga regenerava o ARTIGO INTEIRO quando qualquer issue
+ * falhava (mesmo 1 issue pequena) — a 2ª chamada completa (~190s) é cara e arriscava
+ * estourar o maxDuration de novo. Issues que este fix não cobre (ex.: citation_blocks)
+ * continuam publicando com aviso — nunca inventa conteúdo (citação sem fonte real seria
+ * pior que a ausência).
+ */
+export function fixSimpleValidationIssues<T extends ArticleContent>(
+  article: T,
+  keyword: string,
+  issueRules: string[],
+): T {
+  const fixed = { ...article };
+  if (issueRules.includes('meta_keyword') && !norm(fixed.meta_desc).includes(norm(keyword))) {
+    const candidate = `${keyword}: ${fixed.meta_desc}`;
+    fixed.meta_desc = candidate.length <= 155 ? candidate : candidate.slice(0, 152).trimEnd() + '...';
+  }
+  if (issueRules.includes('cover_alt_keyword') && fixed.cover_alt && !norm(fixed.cover_alt).includes(norm(keyword))) {
+    fixed.cover_alt = `${fixed.cover_alt} — ${keyword}`;
+  }
+  return fixed;
+}
+
 function buildUserPrompt(
   keyword: string,
   internalLinks: InternalLink[],
