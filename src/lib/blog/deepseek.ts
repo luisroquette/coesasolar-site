@@ -314,8 +314,13 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
     if (attempt === 2) break;
     console.warn(`[deepseek] Seção "${section.h2}" voltou vazia na tentativa ${attempt}. Retentando...`);
   }
-  console.warn(`[deepseek] Seção "${section.h2}" voltou vazia nas 2 tentativas — publicando sem corpo nesta seção.`);
-  return '';
+  // ACHADO na lapidação (mesmo dia, motor irmão gaussmob-nextjs): sem fallback textual, uma
+  // seção que segue vazia nas 2 tentativas publica um H2 seguido de NADA — o mesmo defeito
+  // real que o retry acima corrige na maioria dos casos, só que residual. Mesmo padrão já
+  // aplicado em generateSection do gaussmob-nextjs (article-generator.ts): cai no content_brief
+  // em vez de string vazia — pior que um resumo do brief, nunca é publicar em branco.
+  console.warn(`[deepseek] Seção "${section.h2}" voltou vazia nas 2 tentativas — publicando o content_brief como corpo.`);
+  return section.content_brief;
 }
 
 // ---- Montagem: estrutura + seções + FAQ + slots de imagem -> ArticleContent ----
