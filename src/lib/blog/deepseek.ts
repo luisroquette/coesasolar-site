@@ -213,16 +213,13 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
   );
 }
 
-// Teto de saída da estrutura. ACHADO 25/08/2026 (teste E2E em produção, 3 timeouts
-// seguidos): deepseek-v4-flash é modelo de raciocínio — parte do max_tokens vai pro
-// campo interno reasoning_content (nunca aparece em `content`); se o raciocínio estoura
-// o teto, a API devolve HTTP 200 com `content` VAZIO, sem erro (documentado em
-// reference_deepseek_v4_reasoning_gotchas.md, item 2-3). 8000 fixo não bastava — o
-// prompt de estrutura (7-9 seções + FAQ, JSON complexo) induz bastante raciocínio antes
-// da resposta. A doc mede a API aceitando até 65536 e recomenda ser generoso (headroom
-// SOMADO à saída esperada, nunca usado como piso curto) — teto maior não tem custo
-// extra, só protege contra o raciocínio comer tudo.
-const STRUCTURE_MAX_TOKENS = 24000;
+// Teto de saída da estrutura. ACHADO 25/08/2026 (teste E2E em produção): deepseek-v4-flash
+// é modelo de raciocínio — parte do max_tokens vai pro campo interno reasoning_content,
+// nunca aparece em `content` (reference_deepseek_v4_reasoning_gotchas.md, item 2-3). 8000
+// deu content vazio; 24000 (sem streaming) deu erro de conexão "terminated" — provável
+// timeout de rede no meio de uma resposta muito longa aberta sem stream. 12000 é o meio
+// termo: 4x o valor que deu vazio, sem esticar a conexão o bastante pra derrubar de novo.
+const STRUCTURE_MAX_TOKENS = 12000;
 
 export async function generateArticleStructure(
   keyword: string,
@@ -649,10 +646,13 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
 async function askDeepseek(system: string, user: string, maxTokens?: number): Promise<string> {
   // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
   // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
+  // 150s (não 90s) quando maxTokens é passado (generateArticleStructure): achado 25/08/2026
+  // — 90s cortava a conexão no meio de uma resposta de raciocínio longa antes dela terminar
+  // (erro "terminated" do Undici), mesmo dentro do maxDuration=300s da rota.
   const client = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
     baseURL: 'https://api.deepseek.com/v1',
-    timeout: 90_000,
+    timeout: maxTokens !== undefined ? 150_000 : 90_000,
     maxRetries: 1,
   });
   // Mesmo motivo do comentário em generateArticle: 'deepseek-v4-flash' substitui o
