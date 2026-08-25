@@ -70,22 +70,45 @@ export function buildArticleSchema(article: Article, brand: BrandRef): ArticleSc
 }
 
 /**
- * Extrai pares pergunta/resposta de H2s em forma de pergunta (formato FAQ/PAA).
- * Resposta = texto até o próximo header. Perguntas sem resposta são descartadas.
+ * Extrai pares pergunta/resposta do FAQ. Resposta = texto até o próximo header.
+ * Perguntas sem resposta são descartadas. Reconhece 2 formatos:
+ * - Legado: H2 em forma de pergunta, solto no corpo (artigos publicados pelo motor antigo).
+ * - Padrão cfgauss (checklist 25/08/2026, deepseek.ts:assembleArticleMarkdown): H2 fixo
+ *   "## Perguntas Frequentes" seguido de um H3 por pergunta — sem isto, o novo motor por
+ *   seções (sempre H3 dentro do bloco fixo) ficava invisível pro extrator, e o site parava
+ *   de emitir o rich snippet FAQPage pra todo artigo novo.
  */
 export function extractFaq(content: string): FaqEntry[] {
   const faq: FaqEntry[] = [];
   let current: FaqEntry | null = null;
+  let inFaqSection = false;
+
+  const flush = () => {
+    if (current && current.answer.trim()) {
+      faq.push({ question: stripMarkdown(current.question), answer: stripMarkdown(current.answer) });
+    }
+  };
 
   for (const line of content.split('\n')) {
     const h2 = line.match(/^##\s+(.+)$/);
+    const h3 = line.match(/^###\s+(.+)$/);
+
+    if (h2) {
+      flush();
+      const title = h2[1].trim();
+      inFaqSection = /^perguntas frequentes$/i.test(title);
+      current = title.endsWith('?') ? { question: title, answer: '' } : null;
+      continue;
+    }
+    if (h3) {
+      flush();
+      const title = h3[1].trim();
+      current = inFaqSection && title.endsWith('?') ? { question: title, answer: '' } : null;
+      continue;
+    }
     if (/^#{1,6}\s/.test(line)) {
-      if (current && current.answer.trim()) {
-        faq.push({ question: stripMarkdown(current.question), answer: stripMarkdown(current.answer) });
-      }
-      current = h2 && h2[1].trim().endsWith('?')
-        ? { question: h2[1].trim(), answer: '' }
-        : null;
+      flush();
+      current = null;
       continue;
     }
     if (current && current.answer.length < MAX_ANSWER_CHARS) {
@@ -94,9 +117,7 @@ export function extractFaq(content: string): FaqEntry[] {
     }
   }
 
-  if (current && current.answer.trim()) {
-    faq.push({ question: stripMarkdown(current.question), answer: stripMarkdown(current.answer) });
-  }
+  flush();
   return faq;
 }
 

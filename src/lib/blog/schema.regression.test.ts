@@ -102,6 +102,63 @@ describe('REGRESSÃO: schema JSON-LD', () => {
     expect(faq[1].answer).toBe('Considere contrato e taxas.');
   });
 
+  it('REGRESSÃO 25/08/2026 (lapidação Task 6): extractFaq reconhece o formato novo — H2 fixo "Perguntas Frequentes" + H3 por pergunta', () => {
+    const content = [
+      '## Como escolher a placa solar certa',
+      '',
+      'Corpo da seção normal.',
+      '',
+      '## Perguntas Frequentes',
+      '',
+      '### Qual a vida útil de uma placa solar?',
+      '',
+      'Em média 25 anos com manutenção adequada.',
+      '',
+      '### Vale a pena financiar o sistema?',
+      '',
+      'Depende do consumo mensal e da taxa de juros disponível.',
+    ].join('\n');
+
+    const faq = extractFaq(content);
+
+    expect(faq).toHaveLength(2);
+    expect(faq[0].question).toBe('Qual a vida útil de uma placa solar?');
+    expect(faq[0].answer).toContain('25 anos');
+    expect(faq[1].question).toBe('Vale a pena financiar o sistema?');
+  });
+
+  it('REGRESSÃO 25/08/2026: H3 fora do bloco "Perguntas Frequentes" nunca vira entrada de FAQ (mesmo terminando em "?")', () => {
+    const content = [
+      '## Como negociar o contrato',
+      '',
+      '### Isso inclui suporte técnico?',
+      '',
+      'Sim, o suporte está incluído no contrato padrão.',
+      '',
+      '## Conclusão',
+      '',
+      'Fechamento.',
+    ].join('\n');
+
+    expect(extractFaq(content)).toHaveLength(0);
+  });
+
+  it('REGRESSÃO 25/08/2026: formato novo — pergunta sem resposta é descartada, igual ao formato legado', () => {
+    const content = [
+      '## Perguntas Frequentes',
+      '',
+      '### Primeira pergunta?',
+      '',
+      '### Segunda pergunta?',
+      '',
+      'Resposta da segunda.',
+    ].join('\n');
+
+    const faq = extractFaq(content);
+    expect(faq).toHaveLength(1);
+    expect(faq[0].question).toBe('Segunda pergunta?');
+  });
+
   it('buildBreadcrumbSchema emite BreadcrumbList com posições em ordem', () => {
     const schema = buildBreadcrumbSchema([
       { name: 'Blog', url: 'https://exemplo.com.br/blog' },
