@@ -24,6 +24,7 @@ const {
   injectSectionImages,
   regenerateSectionsWithFeedback,
   assembleArticleMarkdown,
+  generateArticleStructure,
 } = await import('./deepseek');
 
 const ARTICLE = {
@@ -264,6 +265,34 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
     const args = createMock.mock.calls[0][0];
     expect(args.max_tokens).toBeGreaterThanOrEqual(1200); // ~2 tokens/palavra PT-BR de folga
+    expect(args.model).toBe('deepseek-v4-flash');
+  });
+});
+
+describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure nunca depende do default de max_tokens da API', () => {
+  const ESTRUTURA_VALIDA_MAXTOKENS = {
+    title: 'Como Escolher Placa Solar',
+    page_title: 'Como Escolher Placa Solar',
+    slug: 'como-escolher-placa-solar',
+    meta_desc: 'meta',
+    cover_image_prompt: 'cover',
+    cover_alt: 'alt',
+    category: 'guias',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 500, image_prompt: 'p',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `P${i}?`, answer: 'R' })),
+  };
+
+  it('max_tokens é explícito (9 seções + 7 FAQs correm o mesmo risco de truncamento que writeSection evita)', async () => {
+    createMock.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify(ESTRUTURA_VALIDA_MAXTOKENS) } }],
+    });
+
+    await generateArticleStructure('placa solar');
+
+    const args = createMock.mock.calls[0][0];
+    expect(args.max_tokens).toBeGreaterThanOrEqual(4000); // generoso o bastante pra 9 seções + FAQ-7
     expect(args.model).toBe('deepseek-v4-flash');
   });
 });

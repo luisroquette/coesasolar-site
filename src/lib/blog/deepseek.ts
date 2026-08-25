@@ -213,13 +213,24 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
   );
 }
 
+// Teto de saída da estrutura: MAX_SECTIONS(9) seções (~230 palavras cada, contando
+// content_brief + image_prompt + sintaxe JSON) + FAQ_COUNT(7) perguntas (~145 palavras
+// cada) ≈ 3100 palavras, mesma proporção de ~2.2 tokens/palavra de maxTokensForSection
+// + margem — explícito para não depender do default do provider (o risco que este
+// plano inteiro existe para eliminar).
+const STRUCTURE_MAX_TOKENS = 8000;
+
 export async function generateArticleStructure(
   keyword: string,
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleStructure> {
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const text = await askDeepseek(STRUCTURE_SYSTEM_PROMPT, buildStructureUserPrompt(keyword, internalLinks, brief));
+    const text = await askDeepseek(
+      STRUCTURE_SYSTEM_PROMPT,
+      buildStructureUserPrompt(keyword, internalLinks, brief),
+      STRUCTURE_MAX_TOKENS,
+    );
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
     if (attempt === 2) break;
@@ -615,7 +626,7 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
   );
 }
 
-async function askDeepseek(system: string, user: string): Promise<string> {
+async function askDeepseek(system: string, user: string, maxTokens?: number): Promise<string> {
   // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
   // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
   const client = new OpenAI({
@@ -626,6 +637,10 @@ async function askDeepseek(system: string, user: string): Promise<string> {
   });
   // Mesmo motivo do comentário em generateArticle: 'deepseek-v4-flash' substitui o
   // nome legado 'deepseek-chat', desativado pela DeepSeek em 2026-07-24.
+  // maxTokens é opcional (undefined preserva o comportamento antigo de generateArticleOutline/
+  // regenerateWithFeedback) — generateArticleStructure passa um valor explícito porque a
+  // estrutura (9 seções + 7 FAQs) é grande o bastante pra correr o MESMO risco de
+  // truncamento silencioso que motivou max_tokens explícito em writeSection (Task 2).
   const response = await client.chat.completions.create({
     model: 'deepseek-v4-flash',
     messages: [
@@ -633,6 +648,7 @@ async function askDeepseek(system: string, user: string): Promise<string> {
       { role: 'user', content: user },
     ],
     temperature: 0.7,
+    ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
   });
   return response.choices[0]?.message?.content ?? '';
 }
