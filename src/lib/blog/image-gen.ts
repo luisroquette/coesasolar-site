@@ -76,10 +76,31 @@ export async function generateAndUploadInfographic(
   }
 }
 
+async function generateAndUploadOne(
+  prompt: string,
+  slug: string,
+  keyword: string,
+  index: number,
+): Promise<{ url: string; alt: string } | null> {
+  if (!prompt?.trim()) return null; // prompt vazio = chamada paga desperdiçada
+  try {
+    const b64 = await generateImageB64(prompt);
+    if (!b64) return null;
+    const webp = await optimizeToWebp(Buffer.from(b64, 'base64'));
+    const url = await uploadImageToStorage(`${slug}-body-${index + 1}.webp`, webp, 'image/webp');
+    return url ? { url, alt: `${keyword} — ilustração ${index + 1}` } : null;
+  } catch (err) {
+    console.warn(`[image-gen] Imagem ${index + 1} do corpo falhou (não bloqueia publicação):`, err);
+    return null;
+  }
+}
+
 /** N imagens para o corpo do artigo (1 por seção), com alt por keyword. `null` na posição i
  *  = aquele prompt/upload falhou — preserva o índice (nunca `.push` só no sucesso) para que
  *  quem consome o array por posição (ex.: injectSectionImages) não desalinhe imagem×seção
- *  quando uma falha no meio da lista. */
+ *  quando uma falha no meio da lista.
+ *  Lotes de 3 em paralelo (achado 25/08/2026: sequencial estourava o maxDuration=300s da
+ *  rota com 7-9 imagens de corpo — mesmo espírito do batch de 3 de writeSection). */
 export async function generateAndUploadBodyImages(
   prompts: string[],
   slug: string,
@@ -87,19 +108,13 @@ export async function generateAndUploadBodyImages(
 ): Promise<Array<{ url: string; alt: string } | null>> {
   if (!AUTOBLOG_PROFILE.integrations.imageGenerationEnabled) return prompts.map(() => null);
 
-  const results: Array<{ url: string; alt: string } | null> = [];
-  for (let i = 0; i < prompts.length; i++) {
-    if (!prompts[i]?.trim()) { results.push(null); continue; } // prompt vazio = chamada paga desperdiçada
-    try {
-      const b64 = await generateImageB64(prompts[i]);
-      if (!b64) { results.push(null); continue; }
-      const webp = await optimizeToWebp(Buffer.from(b64, 'base64'));
-      const url = await uploadImageToStorage(`${slug}-body-${i + 1}.webp`, webp, 'image/webp');
-      results.push(url ? { url, alt: `${keyword} — ilustração ${i + 1}` } : null);
-    } catch (err) {
-      console.warn(`[image-gen] Imagem ${i + 1} do corpo falhou (não bloqueia publicação):`, err);
-      results.push(null);
-    }
+  const results: Array<{ url: string; alt: string } | null> = new Array(prompts.length).fill(null);
+  for (let i = 0; i < prompts.length; i += 3) {
+    const batchIndexes = prompts.slice(i, i + 3).map((_, j) => i + j);
+    const batchResults = await Promise.all(
+      batchIndexes.map(idx => generateAndUploadOne(prompts[idx], slug, keyword, idx))
+    );
+    batchIndexes.forEach((idx, j) => { results[idx] = batchResults[j]; });
   }
   return results;
 }
