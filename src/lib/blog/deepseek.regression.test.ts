@@ -236,6 +236,7 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
       image_prompt: 'Photorealistic detail shot, no text',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
   };
 
   it('estrutura com 7 seções e 7 FAQ é válida', () => {
@@ -282,6 +283,7 @@ describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure n
       h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 500, image_prompt: 'p',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `P${i}?`, answer: 'R' })),
+    summary_bullets: ['B1', 'B2', 'B3'],
   };
 
   it('max_tokens é explícito (9 seções + 7 FAQs correm o mesmo risco de truncamento que writeSection evita)', async () => {
@@ -313,6 +315,7 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
       image_prompt: 'Photorealistic detail shot, no text',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
   };
 
   it('artigo montado tem 1 slot de imagem por seção + FAQ com 7 blocos', async () => {
@@ -329,6 +332,19 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
     expect(article.content).toContain('## ' + ESTRUTURA_MONTAGEM.sections[0]!.h2);
     expect(article.content).toContain('## Perguntas Frequentes');
     expect((article.content.match(/^### /gm) ?? []).length).toBe(7);
+  });
+
+  it('REGRESSÃO 25/08/2026 (achado E2E): monta o H2 "Em resumo" com ≥3 bullets ANTES do FAQ — validateArticle exige isso e o motor por seções não gerava', async () => {
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(ESTRUTURA_MONTAGEM) } }] })
+      .mockResolvedValue({ choices: [{ message: { content: 'Corpo de exemplo da seção, texto suficiente.' } }] });
+
+    const article = await generateArticleWithSections('placa solar');
+
+    expect(article.content).toContain('## Em resumo');
+    const bulletCount = (article.content.match(/^- /gm) ?? []).length;
+    expect(bulletCount).toBeGreaterThanOrEqual(3);
+    expect(article.content.indexOf('## Em resumo')).toBeLessThan(article.content.indexOf('## Perguntas Frequentes'));
   });
 
   it('injectSectionImages: slot sem imagem correspondente (upload falhou) é removido, nunca publica placeholder cru', () => {
@@ -356,6 +372,7 @@ describe('REGRESSÃO checklist 25/08/2026: regenerateSectionsWithFeedback só re
       { h2: 'Seção 3', content_brief: 'brief 3', word_target: 400, image_prompt: 'p3' },
     ],
     faq: [],
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
   };
   const BODIES_ATUAIS = ['Corpo original 1', 'Corpo original 2', 'Corpo original 3'];
 
@@ -401,6 +418,7 @@ describe('REGRESSÃO checklist 25/08/2026: assembleArticleMarkdown é reusada po
       cover_alt: 'a', category: 'cat',
       sections: [{ h2: 'H2 único', content_brief: 'b', word_target: 100, image_prompt: 'p' }],
       faq: [{ question: 'Pergunta?', answer: 'Resposta.' }],
+      summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
     };
     const md1 = assembleArticleMarkdown(structure, ['corpo']);
     const md2 = assembleArticleMarkdown(structure, ['corpo']);

@@ -136,6 +136,7 @@ export interface ArticleStructure {
   category: string | null;
   sections: ArticleSection[];
   faq: ArticleFaqItem[];
+  summary_bullets: string[];
 }
 
 // Alvo do checklist do dono (25/08/2026): mínimo 4.500 palavras totais, 7-9 seções H2 de
@@ -168,7 +169,8 @@ Gere a ESTRUTURA de um artigo (não o texto completo). Retorne SOMENTE JSON vál
   ],
   "faq": [
     { "question": "Pergunta frequente sobre o tema?", "answer": "Resposta CURTA e completa de 50-80 palavras." }
-  ]
+  ],
+  "summary_bullets": ["Bullet auto-contido 1", "Bullet auto-contido 2", "Bullet auto-contido 3"]
 }
 
 REGRAS OBRIGATÓRIAS:
@@ -176,9 +178,22 @@ REGRAS OBRIGATÓRIAS:
 - word_target por seção: 400-700 (soma total mínima 4.500 palavras) — este número é o alvo do REDATOR
   na próxima etapa; content_brief em si fica CURTO (60-90 palavras), é só a instrução, não o texto final.
 - Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta CURTA (50-80 palavras) — objetiva, sem enrolação.
+- summary_bullets: 3 a 5 frases CURTAS, cada uma auto-contida (entrega a ideia sozinha, sem depender
+  do resto do artigo) — vira o box "Em resumo" citável por IA de busca.
 - cover_image_prompt e image_prompt de cada seção sempre em inglês, fotorrealista, sem texto/logo.
 - Manter a persona, tom e vocabulário proibido do prompt de redação do ${brand.name}.
-- Seja DIRETO: esta etapa é só planejamento, não é o artigo final. Não elabore demais.`;
+- Seja DIRETO: esta etapa é só planejamento, não é o artigo final. Não elabore demais.
+
+DISTRIBUA estas 5 obrigações editoriais entre os content_brief das seções (uma linha citando cada
+uma no brief da seção responsável — o redator de cada seção só vê o PRÓPRIO brief):
+1. A seção 1 deve instruir: abrir a primeira frase já citando a keyword do artigo (ver abaixo).
+2. Alguma seção deve instruir: incluir 1 link interno relevante em markdown (usar uma das
+   LINKS INTERNOS DISPONÍVEIS abaixo, formato [texto](url)).
+3. Alguma seção deve instruir: incluir 1 link externo real em markdown pra uma fonte reconhecível
+   (nunca inventar URL).
+4. Alguma seção deve instruir: incluir 1 citação em blockquote (linha iniciada com ">"), com fonte
+   atribuída (nome real + veículo/cargo — nunca inventar).
+5. A ÚLTIMA seção deve instruir: fechar com CTA explícito — "${cta.buttonLabel}" com link ${cta.url}.`;
 
 function buildStructureUserPrompt(keyword: string, internalLinks: InternalLink[], brief: EditorialBrief | null): string {
   const categories = AUTOBLOG_PROFILE.editorial.categories.map(c => `- ${c.slug} (${c.label})`).join('\n');
@@ -211,7 +226,9 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
     Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
     s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
     Array.isArray(s.faq) && s.faq.length === FAQ_COUNT &&
-    s.faq.every(f => !!f.question && !!f.answer)
+    s.faq.every(f => !!f.question && !!f.answer) &&
+    Array.isArray(s.summary_bullets) && s.summary_bullets.length >= 3 && s.summary_bullets.length <= 5 &&
+    s.summary_bullets.every(b => !!b)
   );
 }
 
@@ -273,7 +290,10 @@ SEM front-matter, SEM comentários. Regras:
 - Dados concretos > percentuais vagos ("R$ 3.200/mês" em vez de "até 40%").
 - Vocabulário proibido: "solução inovadora", "cada vez mais", "é importante ressaltar",
   "de acordo com especialistas", "no contexto atual", "vários"/"alguns" sem número.
-- ZERO markdown de imagem (sem ![]()) — a imagem é inserida por fora.`;
+- ZERO markdown de imagem (sem ![]()) — a imagem é inserida por fora.
+- Se a instrução abaixo pedir link interno/externo, citação em blockquote (">") ou CTA de
+  fechamento, siga literalmente — cada seção só recebe essa obrigação quando é a responsável
+  por ela (nem toda seção tem).`;
 
 export async function writeSection(
   keyword: string,
@@ -317,12 +337,17 @@ export function assembleArticleMarkdown(structure: ArticleStructure, bodies: str
     .map((s, i) => `## ${s.h2}\n\n${bodies[i]}\n\n<!-- IMG_SLOT:${i} -->`)
     .join('\n\n');
 
+  // Box "Em resumo" (GEO) — validateArticle exige um H2 fixo com ≥3 bullets, ANTES do
+  // fechamento (mesmo padrão do motor antigo, checklist regra 15). Vem da estrutura
+  // (summary_bullets), nunca gerado por seção — mesmo raciocínio do FAQ.
+  const summaryMd = ['## Em resumo', ...structure.summary_bullets.map(b => `- ${b}`)].join('\n');
+
   const faqMd = [
     '## Perguntas Frequentes',
     ...structure.faq.map(f => `### ${f.question}\n\n${f.answer}`),
   ].join('\n\n');
 
-  return `${sectionsMd}\n\n${faqMd}`;
+  return `${sectionsMd}\n\n${summaryMd}\n\n${faqMd}`;
 }
 
 export async function generateArticleWithSections(
