@@ -265,3 +265,45 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     expect(args.model).toBe('deepseek-v4-flash');
   });
 });
+
+describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticleWithSections)', () => {
+  const ESTRUTURA_MONTAGEM = {
+    title: 'Como Escolher Placa Solar em 2026',
+    page_title: 'Como Escolher Placa Solar 2026',
+    slug: 'como-escolher-placa-solar',
+    meta_desc: 'Descubra como escolher a placa solar certa e economize até R$ 400/mês',
+    cover_image_prompt: 'Photorealistic solar panels on a Brazilian rooftop, no text',
+    cover_alt: 'Placas solares em telhado residencial',
+    category: 'guias',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`,
+      content_brief: 'Instrução de 150-200 palavras para o redator.',
+      word_target: 500,
+      image_prompt: 'Photorealistic detail shot, no text',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+  };
+
+  it('artigo montado tem 1 slot de imagem por seção + FAQ com 7 blocos', async () => {
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(ESTRUTURA_MONTAGEM) } }] })
+      .mockResolvedValue({ choices: [{ message: { content: 'Corpo de exemplo da seção, texto suficiente.' } }] });
+
+    const article = await generateArticleWithSections('placa solar');
+
+    const slotCount = (article.content.match(/<!-- IMG_SLOT:\d+ -->/g) ?? []).length;
+    expect(slotCount).toBe(ESTRUTURA_MONTAGEM.sections.length);
+    expect(article.sectionImagePrompts).toHaveLength(ESTRUTURA_MONTAGEM.sections.length);
+    expect(article.image_prompt).toBe(ESTRUTURA_MONTAGEM.cover_image_prompt);
+    expect(article.content).toContain('## ' + ESTRUTURA_MONTAGEM.sections[0]!.h2);
+    expect(article.content).toContain('## Perguntas Frequentes');
+    expect((article.content.match(/^### /gm) ?? []).length).toBe(7);
+  });
+
+  it('injectSectionImages: slot sem imagem correspondente (upload falhou) é removido, nunca publica placeholder cru', () => {
+    const content = 'texto\n<!-- IMG_SLOT:0 -->\nmais texto\n<!-- IMG_SLOT:1 -->';
+    const out = injectSectionImages(content, [{ url: 'https://x/a.webp', alt: 'a' }, null]);
+    expect(out).toContain('![a](https://x/a.webp)');
+    expect(out).not.toContain('IMG_SLOT');
+  });
+});

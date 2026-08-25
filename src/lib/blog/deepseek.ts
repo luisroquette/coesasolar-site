@@ -278,6 +278,62 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
   return response.choices[0]?.message?.content?.trim() ?? '';
 }
 
+// ---- Montagem: estrutura + seções + FAQ + slots de imagem -> ArticleContent ----
+// A imagem de cada seção só existe DEPOIS do upload (feito por fora, na rota) — o texto é
+// montado ANTES disso. Solução: cada seção termina com um placeholder <!-- IMG_SLOT:N -->,
+// substituído por injectSectionImages assim que as N imagens já estiverem hospedadas.
+
+export async function generateArticleWithSections(
+  keyword: string,
+  internalLinks: InternalLink[] = [],
+  brief: EditorialBrief | null = null,
+): Promise<ArticleContent & { sectionImagePrompts: string[] }> {
+  const structure = await generateArticleStructure(keyword, internalLinks, brief);
+
+  // Seções em lotes de 3 (mesmo espírito do "batch de 3" que o cfgauss usa pra geração de
+  // imagem — evita rate limit da API do DeepSeek).
+  const bodies: string[] = [];
+  for (let i = 0; i < structure.sections.length; i += 3) {
+    const batch = structure.sections.slice(i, i + 3);
+    const batchBodies = await Promise.all(
+      batch.map((s, j) => writeSection(keyword, s, i + j, structure.sections.length))
+    );
+    bodies.push(...batchBodies);
+  }
+
+  const sectionsMd = structure.sections
+    .map((s, i) => `## ${s.h2}\n\n${bodies[i]}\n\n<!-- IMG_SLOT:${i} -->`)
+    .join('\n\n');
+
+  const faqMd = [
+    '## Perguntas Frequentes',
+    ...structure.faq.map(f => `### ${f.question}\n\n${f.answer}`),
+  ].join('\n\n');
+
+  const content = `${sectionsMd}\n\n${faqMd}`;
+
+  return {
+    title: structure.title,
+    page_title: structure.page_title,
+    slug: structure.slug,
+    meta_desc: structure.meta_desc,
+    image_prompt: structure.cover_image_prompt, // capa
+    cover_alt: structure.cover_alt,
+    category: structure.category,
+    content,
+    sectionImagePrompts: structure.sections.map(s => s.image_prompt),
+  };
+}
+
+/** Substitui os placeholders <!-- IMG_SLOT:N --> pelas imagens já geradas/hospedadas.
+ *  Slot sem imagem correspondente (upload falhou) é removido — nunca publica placeholder cru. */
+export function injectSectionImages(content: string, images: Array<{ url: string; alt: string } | null>): string {
+  return content.replace(/<!-- IMG_SLOT:(\d+) -->/g, (_match, idxStr) => {
+    const img = images[Number(idxStr)];
+    return img ? `![${img.alt}](${img.url})` : '';
+  });
+}
+
 function buildUserPrompt(
   keyword: string,
   internalLinks: InternalLink[],
