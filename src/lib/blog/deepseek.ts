@@ -213,12 +213,16 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
   );
 }
 
-// Teto de saída da estrutura: MAX_SECTIONS(9) seções (~230 palavras cada, contando
-// content_brief + image_prompt + sintaxe JSON) + FAQ_COUNT(7) perguntas (~145 palavras
-// cada) ≈ 3100 palavras, mesma proporção de ~2.2 tokens/palavra de maxTokensForSection
-// + margem — explícito para não depender do default do provider (o risco que este
-// plano inteiro existe para eliminar).
-const STRUCTURE_MAX_TOKENS = 8000;
+// Teto de saída da estrutura. ACHADO 25/08/2026 (teste E2E em produção, 3 timeouts
+// seguidos): deepseek-v4-flash é modelo de raciocínio — parte do max_tokens vai pro
+// campo interno reasoning_content (nunca aparece em `content`); se o raciocínio estoura
+// o teto, a API devolve HTTP 200 com `content` VAZIO, sem erro (documentado em
+// reference_deepseek_v4_reasoning_gotchas.md, item 2-3). 8000 fixo não bastava — o
+// prompt de estrutura (7-9 seções + FAQ, JSON complexo) induz bastante raciocínio antes
+// da resposta. A doc mede a API aceitando até 65536 e recomenda ser generoso (headroom
+// SOMADO à saída esperada, nunca usado como piso curto) — teto maior não tem custo
+// extra, só protege contra o raciocínio comer tudo.
+const STRUCTURE_MAX_TOKENS = 24000;
 
 export async function generateArticleStructure(
   keyword: string,
@@ -251,9 +255,12 @@ export async function generateArticleStructure(
 // Chamada por SEÇÃO — nunca o artigo inteiro numa resposta só. generateArticle/
 // regenerateWithFeedback não definem max_tokens, dependendo do default da API — viável pra
 // 1500-2500 palavras, arriscado pra 4500+ (resposta truncada quebra o JSON.parse silenciosamente).
-// max_tokens aqui é EXPLÍCITO e generoso: ~2.2 tokens por palavra em PT-BR + margem de formatação.
+// max_tokens aqui é EXPLÍCITO e generoso: ~2.2 tokens por palavra em PT-BR + margem de
+// headroom pro reasoning_content do deepseek-v4-flash (mesma armadilha do achado 25/08/2026
+// em STRUCTURE_MAX_TOKENS — margem pequena deixa o raciocínio comer o teto inteiro e o
+// `content` volta vazio, HTTP 200, sem erro).
 function maxTokensForSection(wordTarget: number): number {
-  return Math.ceil(wordTarget * 2.2) + 200;
+  return Math.ceil(wordTarget * 2.2) + 3000;
 }
 
 const SECTION_SYSTEM_PROMPT = `Você redige UMA SEÇÃO de um blogpost para ${brand.name} (${brand.siteUrl}).
