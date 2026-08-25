@@ -22,6 +22,7 @@ const {
   writeSection,
   generateArticleWithSections,
   injectSectionImages,
+  enrichSectionBriefs,
   regenerateSectionsWithFeedback,
   assembleArticleMarkdown,
   generateArticleStructure,
@@ -425,5 +426,45 @@ describe('REGRESSÃO checklist 25/08/2026: assembleArticleMarkdown é reusada po
     expect(md1).toBe(md2);
     expect(md1).toContain('<!-- IMG_SLOT:0 -->');
     expect(md1).toContain('## Perguntas Frequentes');
+  });
+});
+
+describe('REGRESSÃO 25/08/2026 (achado E2E): enrichSectionBriefs injeta obrigações editoriais sem chamada de rede', () => {
+  const SECOES_7 = Array.from({ length: 7 }, (_, i) => ({
+    h2: `Seção ${i + 1}`, content_brief: `brief ${i + 1}`, word_target: 500, image_prompt: 'p',
+  }));
+  const LINKS = [{ label: 'Guia de instalação', url: '/blog/guia-instalacao' }];
+
+  it('seção 0 ganha instrução de abrir com a keyword na 1ª frase', () => {
+    const out = enrichSectionBriefs(SECOES_7, 'placa solar', LINKS);
+    expect(out[0]!.content_brief).toContain('Abra a primeira frase já citando "placa solar"');
+  });
+
+  it('última seção ganha CTA de fechamento', () => {
+    const out = enrichSectionBriefs(SECOES_7, 'placa solar', LINKS);
+    expect(out[out.length - 1]!.content_brief).toContain('Feche com CTA explícito');
+  });
+
+  it('link interno só é injetado quando internalLinks não está vazio', () => {
+    const comLink = enrichSectionBriefs(SECOES_7, 'placa solar', LINKS);
+    const semLink = enrichSectionBriefs(SECOES_7, 'placa solar', []);
+    expect(comLink[1]!.content_brief).toContain('/blog/guia-instalacao');
+    expect(semLink.some(s => s.content_brief.includes('link interno'))).toBe(false);
+  });
+
+  it('link externo e citação são injetados em seções distintas do link interno e do CTA', () => {
+    const out = enrichSectionBriefs(SECOES_7, 'placa solar', LINKS);
+    expect(out[2]!.content_brief).toContain('link externo real');
+    expect(out[3]!.content_brief).toContain('citação em blockquote');
+  });
+
+  it('lista vazia de seções: no-op, nunca lança', () => {
+    expect(enrichSectionBriefs([], 'placa solar', LINKS)).toEqual([]);
+  });
+
+  it('não muta o array/objetos originais (cópia defensiva)', () => {
+    const original = JSON.parse(JSON.stringify(SECOES_7));
+    enrichSectionBriefs(SECOES_7, 'placa solar', LINKS);
+    expect(SECOES_7).toEqual(original);
   });
 });

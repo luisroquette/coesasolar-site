@@ -182,18 +182,7 @@ REGRAS OBRIGATÓRIAS:
   do resto do artigo) — vira o box "Em resumo" citável por IA de busca.
 - cover_image_prompt e image_prompt de cada seção sempre em inglês, fotorrealista, sem texto/logo.
 - Manter a persona, tom e vocabulário proibido do prompt de redação do ${brand.name}.
-- Seja DIRETO: esta etapa é só planejamento, não é o artigo final. Não elabore demais.
-
-DISTRIBUA estas 5 obrigações editoriais entre os content_brief das seções (uma linha citando cada
-uma no brief da seção responsável — o redator de cada seção só vê o PRÓPRIO brief):
-1. A seção 1 deve instruir: abrir a primeira frase já citando a keyword do artigo (ver abaixo).
-2. Alguma seção deve instruir: incluir 1 link interno relevante em markdown (usar uma das
-   LINKS INTERNOS DISPONÍVEIS abaixo, formato [texto](url)).
-3. Alguma seção deve instruir: incluir 1 link externo real em markdown pra uma fonte reconhecível
-   (nunca inventar URL).
-4. Alguma seção deve instruir: incluir 1 citação em blockquote (linha iniciada com ">"), com fonte
-   atribuída (nome real + veículo/cargo — nunca inventar).
-5. A ÚLTIMA seção deve instruir: fechar com CTA explícito — "${cta.buttonLabel}" com link ${cta.url}.`;
+- Seja DIRETO: esta etapa é só planejamento, não é o artigo final. Não elabore demais.`;
 
 function buildStructureUserPrompt(keyword: string, internalLinks: InternalLink[], brief: EditorialBrief | null): string {
   const categories = AUTOBLOG_PROFILE.editorial.categories.map(c => `- ${c.slug} (${c.label})`).join('\n');
@@ -350,14 +339,55 @@ export function assembleArticleMarkdown(structure: ArticleStructure, bodies: str
   return `${sectionsMd}\n\n${summaryMd}\n\n${faqMd}`;
 }
 
+/**
+ * Injeta as 5 obrigações editoriais (keyword na 1ª frase, link interno, link externo,
+ * citação em blockquote, CTA de fechamento) nos content_brief de seções específicas —
+ * ACHADO 25/08/2026: pedir pro MODELO decidir e distribuir isso na fase de estrutura
+ * inflava o raciocínio (95-105s por tentativa, chegando a truncar o JSON de novo). Fazer
+ * isso em código puro é instantâneo, determinístico (nunca depende do modelo lembrar) e
+ * não custa nenhum token extra na estrutura. Nunca lança — MIN_SECTIONS=7 garante os
+ * índices usados (0,1,2,3,último) sempre existem sem colisão.
+ */
+export function enrichSectionBriefs(
+  sections: ArticleSection[],
+  keyword: string,
+  internalLinks: InternalLink[],
+): ArticleSection[] {
+  const enriched = sections.map(s => ({ ...s }));
+  if (enriched.length === 0) return enriched;
+
+  enriched[0]!.content_brief = `Abra a primeira frase já citando "${keyword}". ${enriched[0]!.content_brief}`;
+
+  if (internalLinks.length > 0) {
+    const idx = Math.min(1, enriched.length - 1);
+    const link = internalLinks[0]!;
+    enriched[idx]!.content_brief = `${enriched[idx]!.content_brief} Inclua 1 link interno em markdown: [${link.label}](${link.url}).`;
+  }
+
+  const extIdx = Math.min(2, enriched.length - 1);
+  enriched[extIdx]!.content_brief = `${enriched[extIdx]!.content_brief} Inclua 1 link externo real em markdown pra uma fonte reconhecível sobre o tema — nunca invente URL.`;
+
+  const quoteIdx = Math.min(3, enriched.length - 1);
+  enriched[quoteIdx]!.content_brief = `${enriched[quoteIdx]!.content_brief} Inclua 1 citação em blockquote (">") com fonte atribuída real (nome + veículo/cargo) — nunca invente.`;
+
+  const lastIdx = enriched.length - 1;
+  enriched[lastIdx]!.content_brief = `${enriched[lastIdx]!.content_brief} Feche com CTA explícito: "${cta.buttonLabel}" com link ${cta.url}.`;
+
+  return enriched;
+}
+
 export async function generateArticleWithSections(
   keyword: string,
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleContent & { sectionImagePrompts: string[]; structure: ArticleStructure; bodies: string[] }> {
   const tStructure = Date.now(); // DEBUG TEMPORÁRIO 25/08/2026 — remover junto com o resto do diagnóstico
-  const structure = await generateArticleStructure(keyword, internalLinks, brief);
-  console.warn(`[deepseek][DEBUG] estrutura total (com retries) levou ${Math.round((Date.now() - tStructure) / 1000)}s, ${structure.sections.length} seções`);
+  const rawStructure = await generateArticleStructure(keyword, internalLinks, brief);
+  console.warn(`[deepseek][DEBUG] estrutura total (com retries) levou ${Math.round((Date.now() - tStructure) / 1000)}s, ${rawStructure.sections.length} seções`);
+  const structure: ArticleStructure = {
+    ...rawStructure,
+    sections: enrichSectionBriefs(rawStructure.sections, keyword, internalLinks),
+  };
 
   // Seções em lotes de 3 (mesmo espírito do "batch de 3" que o cfgauss usa pra geração de
   // imagem — evita rate limit da API do DeepSeek).
