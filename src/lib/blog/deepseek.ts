@@ -107,6 +107,127 @@ function buildInternalLinksSection(links: InternalLink[]): string {
   return links.map(link => `- [${link.label}](${link.url})`).join('\n');
 }
 
+// ---- Estrutura por seção (padrão cfgauss, checklist do dono 25/08/2026) ----
+// Substitui o pedido de artigo INTEIRO numa chamada só (generateArticle acima) por: 1 chamada
+// pequena pra ESTRUTURA (títulos de seção + briefs + metas de palavras + prompt de imagem) e
+// depois 1 chamada por SEÇÃO (writeSection, abaixo) — evita o risco de truncamento silencioso
+// que um artigo de 4.500+ palavras numa resposta só correria (nem generateArticle nem
+// regenerateWithFeedback definem max_tokens, dependendo do default da API).
+
+export interface ArticleSection {
+  h2: string;
+  content_brief: string;
+  word_target: number;
+  image_prompt: string;
+}
+
+export interface ArticleFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface ArticleStructure {
+  title: string;
+  page_title: string | null;
+  slug: string;
+  meta_desc: string;
+  cover_image_prompt: string;
+  cover_alt: string | null;
+  category: string | null;
+  sections: ArticleSection[];
+  faq: ArticleFaqItem[];
+}
+
+// Alvo do checklist do dono (25/08/2026): mínimo 4.500 palavras totais, 7-9 seções H2 de
+// 400-700 palavras cada, FAQ com exatamente 7 perguntas de 100-150 palavras. Mesmos números
+// do padrão cfgauss.com.br/blog.
+const MIN_SECTIONS = 7;
+const MAX_SECTIONS = 9;
+const FAQ_COUNT = 7;
+
+const STRUCTURE_SYSTEM_PROMPT = `Você é um estrategista de conteúdo SEO para ${brand.name} (${brand.siteUrl}),
+${editorial.businessDescription}. Público: ${editorial.audience}.
+
+Gere a ESTRUTURA de um artigo (não o texto completo). Retorne SOMENTE JSON válido:
+
+{
+  "title": "Título H1 com a keyword nas primeiras palavras (máx 60 chars), promessa concreta",
+  "page_title": "Título para aba/Google (máx 60 chars, keyword no início)",
+  "slug": "slug-kebab-case-com-a-keyword-max-6-palavras-sem-artigos",
+  "meta_desc": "Keyword + ganho concreto do clique (máx 155 chars, sem ponto final)",
+  "cover_image_prompt": "Cena fotorrealista em inglês, sem texto na imagem, sem logos, high quality, 4k",
+  "cover_alt": "Frase curta em PT-BR descrevendo a cena da capa, com a keyword",
+  "category": "slug de UMA categoria da lista fornecida",
+  "sections": [
+    {
+      "h2": "Título da seção (H2)",
+      "content_brief": "Instrução de 150-200 palavras para o redator escrever esta seção: quais pontos cobrir, exemplos práticos da persona, dados/fatos, tom.",
+      "word_target": 550,
+      "image_prompt": "Cena fotorrealista em inglês para esta seção, sem texto, sem logos"
+    }
+  ],
+  "faq": [
+    { "question": "Pergunta frequente sobre o tema?", "answer": "Resposta completa de 100-150 palavras." }
+  ]
+}
+
+REGRAS OBRIGATÓRIAS:
+- Entre ${MIN_SECTIONS} e ${MAX_SECTIONS} seções H2, cada uma sobre um aspecto distinto do tema (sem sobreposição).
+- word_target por seção: 400-700 (soma total mínima 4.500 palavras).
+- Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta com 100-150 palavras de instrução.
+- cover_image_prompt e image_prompt de cada seção sempre em inglês, fotorrealista, sem texto/logo.
+- Manter a persona, tom e vocabulário proibido do prompt de redação do ${brand.name}.`;
+
+function buildStructureUserPrompt(keyword: string, internalLinks: InternalLink[], brief: EditorialBrief | null): string {
+  const categories = AUTOBLOG_PROFILE.editorial.categories.map(c => `- ${c.slug} (${c.label})`).join('\n');
+  return `Planeje a estrutura de um artigo SEO completo sobre "${keyword}".
+
+${buildEditorialBriefSection(brief)}
+## CATEGORIA (escolha UMA da lista — retorne o slug)
+${categories}
+
+## LINKS INTERNOS DISPONÍVEIS (para orientar o conteúdo das seções, não citar URL aqui)
+${buildInternalLinksSection(internalLinks)}
+
+Retorne SOMENTE o JSON da estrutura.`;
+}
+
+export function parseStructure(text: string): ArticleStructure | null {
+  try {
+    const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+    return JSON.parse(cleaned) as ArticleStructure;
+  } catch {
+    return null;
+  }
+}
+
+export function isValidStructure(s: ArticleStructure, keyword: string): boolean {
+  const norm = (str: string) => str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return (
+    !!s?.title && norm(s.title).includes(norm(keyword)) &&
+    !!s.slug && !!s.meta_desc && !!s.cover_image_prompt &&
+    Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
+    s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
+    Array.isArray(s.faq) && s.faq.length === FAQ_COUNT &&
+    s.faq.every(f => !!f.question && !!f.answer)
+  );
+}
+
+export async function generateArticleStructure(
+  keyword: string,
+  internalLinks: InternalLink[] = [],
+  brief: EditorialBrief | null = null,
+): Promise<ArticleStructure> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const text = await askDeepseek(STRUCTURE_SYSTEM_PROMPT, buildStructureUserPrompt(keyword, internalLinks, brief));
+    const structure = parseStructure(text);
+    if (structure && isValidStructure(structure, keyword)) return structure;
+    if (attempt === 2) break;
+    console.warn(`[deepseek] Estrutura inválida na tentativa ${attempt}. Retentando...`);
+  }
+  throw new Error('deepseek_structure_failed');
+}
+
 function buildUserPrompt(
   keyword: string,
   internalLinks: InternalLink[],

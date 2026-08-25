@@ -13,7 +13,16 @@ vi.mock('openai', () => ({
   },
 }));
 
-const { regenerateWithFeedback, generateArticle, REQUIRED_FIELDS } = await import('./deepseek');
+const {
+  regenerateWithFeedback,
+  generateArticle,
+  REQUIRED_FIELDS,
+  isValidStructure,
+  parseStructure,
+  writeSection,
+  generateArticleWithSections,
+  injectSectionImages,
+} = await import('./deepseek');
 
 const ARTICLE = {
   title: 'Título original',
@@ -205,5 +214,44 @@ describe('REGRESSÃO: deepseek — chamadas usam um model id ativo na DeepSeek, 
     const callArgs = createMock.mock.calls[0][0];
     expect(callArgs.model).toBe('deepseek-v4-flash');
     expect(callArgs.model).not.toBe('deepseek-chat');
+  });
+});
+
+describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7 FAQs (padrão cfgauss)', () => {
+  const ESTRUTURA_VALIDA = {
+    title: 'Como Escolher Placa Solar em 2026',
+    page_title: 'Como Escolher Placa Solar 2026',
+    slug: 'como-escolher-placa-solar',
+    meta_desc: 'Descubra como escolher a placa solar certa e economize até R$ 400/mês',
+    cover_image_prompt: 'Photorealistic solar panels on a Brazilian rooftop, no text',
+    cover_alt: 'Placas solares em telhado residencial',
+    category: 'guias',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`,
+      content_brief: 'Instrução de 150-200 palavras para o redator.',
+      word_target: 500,
+      image_prompt: 'Photorealistic detail shot, no text',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+  };
+
+  it('estrutura com 7 seções e 7 FAQ é válida', () => {
+    expect(isValidStructure(ESTRUTURA_VALIDA, 'placa solar')).toBe(true);
+  });
+  it('estrutura com 3 seções é inválida (mínimo 7)', () => {
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: ESTRUTURA_VALIDA.sections.slice(0, 3) }, 'placa solar')).toBe(false);
+  });
+  it('estrutura com 10 seções é inválida (máximo 9)', () => {
+    const extra = [...ESTRUTURA_VALIDA.sections, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!];
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: extra }, 'placa solar')).toBe(false);
+  });
+  it('estrutura com 5 perguntas de FAQ é inválida (exatas 7)', () => {
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, faq: ESTRUTURA_VALIDA.faq.slice(0, 5) }, 'placa solar')).toBe(false);
+  });
+  it('estrutura sem a keyword no título é inválida', () => {
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, title: 'Guia genérico sem o termo' }, 'placa solar')).toBe(false);
+  });
+  it('parseStructure: JSON malformado devolve null (nunca lança)', () => {
+    expect(parseStructure('não é json')).toBeNull();
   });
 });
