@@ -84,17 +84,29 @@ export interface InsertArticleInput {
   guest_url?: string | null;
 }
 
+/** Resultado do claim do dia: distingue "pode publicar", "já publicou" e "claim falhou". */
+export type BlogClaimResult = 'claimed' | 'already_run' | 'error';
+
+/** Pura: interpreta a resposta do RPC de claim SEM confundir erro de infra com "já rodou hoje".
+ *  REGRESSÃO 17/08/2026: um erro no coesa_blog_claim_run (RPC ausente/secret/transitório)
+ *  virava `false` e a rota respondia 200 "already_run_today" — dia perdido em silêncio
+ *  (sem artigo, sem run_log, sem erro). Agora erro vira 'error' e a rota responde 500. */
+export function interpretClaimResult(
+  data: unknown,
+  error: { message?: string } | null,
+): BlogClaimResult {
+  if (error) return 'error';
+  return data === true ? 'claimed' : 'already_run';
+}
+
 /** Claims today's run before generation, preventing concurrent cron duplicates. */
-export async function claimBlogRunToday(): Promise<boolean> {
+export async function claimBlogRunToday(): Promise<BlogClaimResult> {
   const supabase = getClient();
   const { data, error } = await supabase.rpc('coesa_blog_claim_run', {
     p_secret: getCronSecret(),
   });
-  if (error) {
-    console.error('[claimBlogRunToday] RPC error:', error.message);
-    return false;
-  }
-  return data === true;
+  if (error) console.error('[claimBlogRunToday] RPC error:', error.message);
+  return interpretClaimResult(data, error);
 }
 
 export async function getPublishedKeywords(): Promise<string[]> {

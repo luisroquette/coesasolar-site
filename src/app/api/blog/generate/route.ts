@@ -34,8 +34,14 @@ export async function GET(request: NextRequest) {
 
   // Claim atômico antes de qualquer chamada externa: evita publicação duplicada
   // quando cron/manual chegam quase simultaneamente.
-  if (!(await claimBlogRunToday())) {
+  const claim = await claimBlogRunToday();
+  if (claim === 'already_run') {
     return NextResponse.json({ message: 'already_run_today' }, { status: 200 });
+  }
+  if (claim === 'error') {
+    // Claim falhou por infra (RPC ausente/secret/transitório): NUNCA responder 200 aqui —
+    // senão o cron da Vercel marca como sucesso, não re-tenta e o dia fica sem artigo em silêncio.
+    return NextResponse.json({ error: 'claim_failed' }, { status: 500 });
   }
 
   let keyword: string | undefined;
