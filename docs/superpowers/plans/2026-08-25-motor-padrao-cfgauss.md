@@ -33,7 +33,7 @@
 
 **IMPORTANTE (verificado 25/08):** `deepseek.regression.test.ts` JÁ EXISTE com um mock de módulo top-level de `openai` (`const createMock = vi.fn(); vi.mock('openai', () => ({ default: class OpenAI { chat = { completions: { create: createMock } } } }))`) e `beforeEach(() => createMock.mockReset())`, cobrindo `regenerateWithFeedback`/`generateArticle`. TODOS os testes deste plano (Tasks 1-3) são NOVOS `describe` blocks ADICIONADOS a esse mesmo arquivo, reusando o `createMock` já declarado — nunca criar um segundo `vi.mock('openai', ...)` no mesmo arquivo (o Vitest não empilha mocks de módulo).
 
-- [ ] **Step 1: Escrever o teste (falha antes)**
+- [X] **Step 1: Escrever o teste (falha antes)**
 
 ```typescript
 // ADICIONAR ao final de src/lib/blog/deepseek.regression.test.ts. Reusa createMock e os
@@ -86,7 +86,7 @@ describe("REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
 });
 ```
 
-- [ ] **Step 2: Implementar tipos + prompt + parse/validação**
+- [X] **Step 2: Implementar tipos + prompt + parse/validação**
 
 ```typescript
 // src/lib/blog/deepseek.ts — adicionar (não remover nada existente)
@@ -208,7 +208,7 @@ export async function generateArticleStructure(
 
 (`askDeepseek` já existe no arquivo — linha 343 — reusar sem alteração; ela já não define `max_tokens`, o que é aceitável aqui porque a ESTRUTURA é pequena, não o artigo inteiro.)
 
-- [ ] **Step 3: Testes até verde + commit**
+- [X] **Step 3: Testes até verde + commit**
 
 ```bash
 npx vitest run src/lib/blog/deepseek.regression.test.ts
@@ -228,7 +228,7 @@ git commit -m "feat(blog): estrutura de artigo com 7-9 seções + FAQ 7 (checkli
 - Consumes: `ArticleSection` (Task 1).
 - Produces: `writeSection(keyword: string, section: ArticleSection, sectionIndex: number, totalSections: number): Promise<string>` (markdown do corpo da seção, SEM o `##` do H2 — quem monta o H2 é a Task 3) — consumida pela Task 3.
 
-- [ ] **Step 1: Teste (falha antes)**
+- [X] **Step 1: Teste (falha antes)**
 
 ```typescript
 // writeSection já está no destructure único do topo do arquivo (ver nota da Task 1) —
@@ -241,7 +241,7 @@ it("writeSection: max_tokens é explícito e proporcional ao word_target (nunca 
 });
 ```
 
-- [ ] **Step 2: Implementar**
+- [X] **Step 2: Implementar**
 
 ```typescript
 // src/lib/blog/deepseek.ts
@@ -299,7 +299,7 @@ Alvo: ${section.word_target} palavras.`;
 }
 ```
 
-- [ ] **Step 3: Testes até verde + commit**
+- [X] **Step 3: Testes até verde + commit**
 
 ```bash
 npx vitest run src/lib/blog/deepseek.regression.test.ts
@@ -320,7 +320,7 @@ git commit -m "feat(blog): geração de seção com max_tokens explícito (evita
 - Consumes: `ArticleStructure` (Task 1), `writeSection` (Task 2).
 - Produces: `generateArticleWithSections(keyword, internalLinks?, brief?): Promise<ArticleContent>` — MESMO tipo de retorno que `generateArticle` já produz hoje, para não quebrar `route.ts` além do necessário. Consumida pela Task 4.
 
-- [ ] **Step 1: Teste (falha antes)**
+- [X] **Step 1: Teste (falha antes)**
 
 **Mock pelo LIMITE do módulo, nunca `vi.spyOn` de função interna** — o arquivo mocka a fronteira real (`openai`'s `create()`), e named exports ESM não são confiavelmente espiáveis com `vi.spyOn` sem config extra. Encadear `createMock` na ORDEM real de chamadas: 1ª = estrutura, 2ª em diante = 1 por seção (em lotes de 3 — ver Task 3 Step 2).
 
@@ -351,7 +351,7 @@ it("injectSectionImages: slot sem imagem correspondente (upload falhou) é remov
 });
 ```
 
-- [ ] **Step 2: Implementar (o desafio: imagem-por-seção só existe DEPOIS do upload, mas o texto é montado ANTES)**
+- [X] **Step 2: Implementar (o desafio: imagem-por-seção só existe DEPOIS do upload, mas o texto é montado ANTES)**
 
 Decisão de design: `assembleArticle` monta o markdown com um **placeholder** por seção (`<!-- IMG_SLOT:N -->`), e uma função separada `injectSectionImages` (análoga a `injectBodyImages`, mas por slot nomeado em vez de índice de H2) substitui os slots depois que as N imagens já foram geradas e hospedadas — mesma divisão de responsabilidade que a rota já faz hoje para capa/corpo/infográfico.
 
@@ -410,7 +410,7 @@ export function injectSectionImages(content: string, images: Array<{ url: string
 }
 ```
 
-- [ ] **Step 3: Testes até verde + commit**
+- [X] **Step 3: Testes até verde + commit**
 
 ```bash
 npx vitest run src/lib/blog/deepseek.regression.test.ts
@@ -430,7 +430,7 @@ git commit -m "feat(blog): montagem do artigo por seções + FAQ + slots de imag
 - Consumes: `generateArticleWithSections` (Task 3), `injectSectionImages` (Task 3), `generateAndUploadBodyImages` (já existente em `image-gen.ts` — GENÉRICO, aceita array de N prompts, não precisa mudar).
 - Produces: artigo publicado com 1 capa + N imagens de seção (8-10 total pro alvo de 7-9 seções).
 
-- [ ] **Step 1: Substituir a chamada de geração**
+- [X] **Step 1: Substituir a chamada de geração**
 
 ```typescript
 // route.ts — ANTES (trecho aproximado, conferir linhas reais no arquivo):
@@ -494,7 +494,7 @@ export async function generateAndUploadBodyImages(
 
 Isso muda o tipo de retorno — checar se algum OUTRO consumidor de `generateAndUploadBodyImages` além desta rota existe (`grep -rn "generateAndUploadBodyImages" src`) e ajustar (o modo antigo de `injectBodyImages` filtra `x.image !== undefined` — com `null` no lugar de ausência, trocar esse filtro pra `x.image !== null`, ou deixar `injectBodyImages` como está se ele só for usado por um caminho que este plano não toca).
 
-- [ ] **Step 2: `regenerateWithFeedback` — decisão de escopo**
+- [X] **Step 2: `regenerateWithFeedback` — decisão de escopo**
 
 O gate de qualidade (`runQualityGateLoop`) pode pedir regeneração se `score < 90`. A função antiga `regenerateWithFeedback` reenvia o ARTIGO INTEIRO numa chamada — mesmo risco de truncamento que motivou este plano inteiro. Two opções, ESCOLHER UMA (não implementar as duas):
 
@@ -539,7 +539,7 @@ curl -s -X GET "https://<preview-url>/api/blog/generate" -H "Authorization: Bear
 
 Conferir manualmente no artigo publicado: contagem de palavras ≥4.500 (`select word_count from articles order by created_at desc limit 1` no Supabase do coesasolar), 8-10 imagens no `content` (contar `![`), 7 blocos `### ` no FAQ.
 
-- [ ] **Step 4: Commit**
+- [X] **Step 4: Commit**
 
 ```bash
 git add src/app/api/blog/generate/route.ts src/lib/blog/deepseek.ts src/lib/blog/image-gen.ts
