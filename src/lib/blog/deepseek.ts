@@ -226,11 +226,13 @@ export async function generateArticleStructure(
   brief: EditorialBrief | null = null,
 ): Promise<ArticleStructure> {
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const tAttempt = Date.now(); // DEBUG TEMPORÁRIO 25/08/2026 — remover junto com o resto do diagnóstico
     const text = await askDeepseek(
       STRUCTURE_SYSTEM_PROMPT,
       buildStructureUserPrompt(keyword, internalLinks, brief),
       STRUCTURE_MAX_TOKENS,
     );
+    console.warn(`[deepseek][DEBUG] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
     // DEBUG TEMPORÁRIO (25/08/2026, diagnóstico do 500 em produção — remover após achar a causa):
@@ -322,16 +324,20 @@ export async function generateArticleWithSections(
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleContent & { sectionImagePrompts: string[]; structure: ArticleStructure; bodies: string[] }> {
+  const tStructure = Date.now(); // DEBUG TEMPORÁRIO 25/08/2026 — remover junto com o resto do diagnóstico
   const structure = await generateArticleStructure(keyword, internalLinks, brief);
+  console.warn(`[deepseek][DEBUG] estrutura total (com retries) levou ${Math.round((Date.now() - tStructure) / 1000)}s, ${structure.sections.length} seções`);
 
   // Seções em lotes de 3 (mesmo espírito do "batch de 3" que o cfgauss usa pra geração de
   // imagem — evita rate limit da API do DeepSeek).
   const bodies: string[] = [];
   for (let i = 0; i < structure.sections.length; i += 3) {
+    const tBatch = Date.now();
     const batch = structure.sections.slice(i, i + 3);
     const batchBodies = await Promise.all(
       batch.map((s, j) => writeSection(keyword, s, i + j, structure.sections.length))
     );
+    console.warn(`[deepseek][DEBUG] lote de seções ${i}-${i + batch.length - 1} levou ${Math.round((Date.now() - tBatch) / 1000)}s`);
     bodies.push(...batchBodies);
   }
 

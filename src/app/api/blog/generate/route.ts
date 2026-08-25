@@ -38,6 +38,8 @@ export async function GET(request: NextRequest) {
   }
 
   let keyword: string | undefined;
+  const t0 = Date.now(); // DEBUG TEMPORÁRIO (25/08/2026, diagnóstico do timeout) — remover depois
+  const lap = (label: string) => console.warn(`[blog/generate][DEBUG] ${label}: +${Math.round((Date.now() - t0) / 1000)}s`);
 
   try {
     // 1. Keyword do dia: pauta do calendário TEM precedência (o dono agenda);
@@ -100,6 +102,7 @@ export async function GET(request: NextRequest) {
       });
 
     let article = await generateArticleWithSections(kw, internalLinks, brief);
+    lap('estrutura+seções geradas');
     // Guarda a estrutura aprovada na pauta do calendário (no-op se a keyword veio do seed)
     await saveOutlineStructure(kw, JSON.stringify(article.structure)).catch(() => {});
 
@@ -107,21 +110,25 @@ export async function GET(request: NextRequest) {
     if (!report.ok) {
       console.warn('[blog/generate] Checklist on-page falhou — regenerando:', report.issues);
       article = await generateArticleWithSections(kw, internalLinks, brief);
+      lap('regeração completa (checklist falhou)');
       report = validate(article);
     }
     const warnings = report.ok ? [] : report.issues;
 
     // 3. Gerar imagem de capa (falha silenciosa — não bloqueia publicação)
     const coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
+    lap('capa gerada');
 
     // 3.5 Imagens do corpo: 1 por seção (7-9), alt com keyword (flag imageGenerationEnabled).
     //     generateAndUploadBodyImages preserva posição (null nas falhas) — sectionImages[i]
     //     sempre corresponde à seção i, mesmo se uma imagem no meio da lista falhar.
     const sectionImages = await generateAndUploadBodyImages(article.sectionImagePrompts, article.slug, kw);
+    lap('imagens de corpo geradas');
     const finalContent = injectSectionImages(article.content, sectionImages);
 
     // 3.6 Infográfico (flag infographicsEnabled): resumo visual antes do fechamento
     const infographicUrl = await generateAndUploadInfographic(article.image_prompt, article.slug);
+    lap('infográfico (flag off = instantâneo)');
     const finalContentWithInfographic = injectInfographic(
       finalContent,
       infographicUrl ? { url: infographicUrl, alt: `${kw} — infográfico` } : null,
@@ -158,6 +165,7 @@ export async function GET(request: NextRequest) {
     );
     article = gateResult.content.article;
     const finalContentWithCtas = gateResult.content.content;
+    lap(`gate de qualidade concluído (attempts=${gateResult.attempts}, skipped=${gateResult.judged.skipped})`);
     if (!gateResult.judged.skipped) {
       console.warn(`[blog/generate] Quality gate score final: ${gateResult.judged.score}`);
     }
