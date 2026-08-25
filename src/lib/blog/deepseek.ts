@@ -233,6 +233,13 @@ export async function generateArticleStructure(
     );
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
+    // DEBUG TEMPORÁRIO (25/08/2026, diagnóstico do 500 em produção — remover após achar a causa):
+    if (!structure) {
+      console.warn(`[deepseek][DEBUG] parseStructure falhou. Texto bruto (800 chars):`, text.slice(0, 800));
+    } else {
+      console.warn(`[deepseek][DEBUG] isValidStructure=false. sections=${structure.sections?.length}, faq=${structure.faq?.length}, title="${structure.title}"`,
+        JSON.stringify(structure.sections?.map(s => ({ h2: s.h2, word_target: s.word_target })) ?? []));
+    }
     if (attempt === 2) break;
     console.warn(`[deepseek] Estrutura inválida na tentativa ${attempt}. Retentando...`);
   }
