@@ -3,6 +3,8 @@
 // Neil Patel / RD Station no artigo REAL, não confia no checklist do prompt.
 // Falha → o pipeline regenera uma vez; se falhar de novo, publica com aviso.
 
+import { MIN_SECTIONS, MAX_SECTIONS } from './deepseek';
+
 export interface ValidationInput {
   keyword: string;
   title: string;
@@ -94,13 +96,15 @@ export function validateArticle(input: ValidationInput): ValidationResult {
     add('meta_no_final_period', 'Meta description termina com ponto final.');
   }
 
-  // 4. 4 a 6 H2s, com a keyword em pelo menos um deles
-  // O H2 fixo "Em resumo" (box GEO) não conta na janela — não é bloco de conteúdo.
+  // 4. MIN_SECTIONS a MAX_SECTIONS H2s de seção (padrão cfgauss, checklist 25/08/2026),
+  //    com a keyword em pelo menos um deles. "Em resumo" (box GEO) e "Perguntas Frequentes"
+  //    (H2 fixo do FAQ, deepseek.ts:assembleArticleMarkdown) não contam na janela — não
+  //    são seções de conteúdo, são blocos fixos que sempre aparecem além delas.
   const h2s = (codeStripped.match(/^##\s.*$/gm) ?? []).filter(
-    h => !/^##\s*em resumo\s*$/i.test(h)
+    h => !/^##\s*(em resumo|perguntas frequentes)\s*$/i.test(h)
   );
-  if (h2s.length < 4 || h2s.length > 6) {
-    add('h2_count', `${h2s.length} H2s — esperado entre 4 e 6.`);
+  if (h2s.length < MIN_SECTIONS || h2s.length > MAX_SECTIONS) {
+    add('h2_count', `${h2s.length} H2s — esperado entre ${MIN_SECTIONS} e ${MAX_SECTIONS}.`);
   }
   if (!h2s.some(h => normalize(h).includes(kw))) {
     add('h2_keyword', 'Nenhum H2 contém a keyword (o prompt pede ≥2 com variações).');

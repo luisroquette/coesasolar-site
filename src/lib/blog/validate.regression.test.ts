@@ -52,6 +52,14 @@ function makeValidInput(overrides: Partial<ValidationInput> = {}): ValidationInp
     '',
     fill(10),
     '',
+    '## Como negociar prazos com o fornecedor',
+    '',
+    fill(10),
+    '',
+    '## Como medir o ROI da solução escolhida',
+    '',
+    fill(10),
+    '',
     '## Em resumo',
     '',
     '- Avalie entrega, suporte, contrato e custo total antes de decidir.',
@@ -118,7 +126,7 @@ describe('REGRESSÃO: validador pós-geração (checklist Neil/RD)', () => {
     expect(rules(input)).toContain('meta_keyword');
   });
 
-  it('h2_count: reprova fora do intervalo de 4 a 6 H2s', () => {
+  it('h2_count: reprova fora do intervalo de 7 a 9 H2s', () => {
     const input = makeValidInput();
     input.content = `## Primeiro\n\n## Segundo\n\n${fill(80)}`;
     expect(rules(input)).toContain('h2_count');
@@ -295,9 +303,17 @@ describe('REGRESSÃO: validador pós-geração (checklist Neil/RD)', () => {
     expect(rules(input)).not.toContain('citation_blocks');
   });
 
-  it('h2_count: o H2 "Em resumo" não conta na janela de 4 a 6', () => {
+  it('h2_count: o H2 "Em resumo" não conta na janela de 7 a 9', () => {
     const input = makeValidInput();
-    // 5 H2s de conteúdo + "Em resumo" = 6 H2s no total; sem o filtro, 'h2_count' dispararia
+    // 7 H2s de conteúdo + "Em resumo" = 8 H2s no total; sem o filtro, 'h2_count' dispararia
+    expect(rules(input)).not.toContain('h2_count');
+  });
+
+  it('h2_count: o H2 "Perguntas Frequentes" (FAQ) não conta na janela de 7 a 9', () => {
+    const input = makeValidInput();
+    input.content = `${input.content}\n\n## Perguntas Frequentes\n\n### Uma pergunta?\n\nUma resposta.`;
+    // 7 H2s de conteúdo + "Em resumo" + "Perguntas Frequentes" = 9 no total; sem o
+    // filtro, 'h2_count' dispararia (motor por seções sempre fecha com o FAQ).
     expect(rules(input)).not.toContain('h2_count');
   });
 });

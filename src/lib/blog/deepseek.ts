@@ -141,9 +141,9 @@ export interface ArticleStructure {
 // Alvo do checklist do dono (25/08/2026): mínimo 4.500 palavras totais, 7-9 seções H2 de
 // 400-700 palavras cada, FAQ com exatamente 7 perguntas de 100-150 palavras. Mesmos números
 // do padrão cfgauss.com.br/blog.
-const MIN_SECTIONS = 7;
-const MAX_SECTIONS = 9;
-const FAQ_COUNT = 7;
+export const MIN_SECTIONS = 7;
+export const MAX_SECTIONS = 9;
+export const FAQ_COUNT = 7;
 
 const STRUCTURE_SYSTEM_PROMPT = `Você é um estrategista de conteúdo SEO para ${brand.name} (${brand.siteUrl}),
 ${editorial.businessDescription}. Público: ${editorial.audience}.
