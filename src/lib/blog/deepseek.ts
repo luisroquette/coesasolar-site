@@ -161,22 +161,24 @@ Gere a ESTRUTURA de um artigo (não o texto completo). Retorne SOMENTE JSON vál
   "sections": [
     {
       "h2": "Título da seção (H2)",
-      "content_brief": "Instrução de 150-200 palavras para o redator escrever esta seção: quais pontos cobrir, exemplos práticos da persona, dados/fatos, tom.",
+      "content_brief": "Instrução CURTA de 60-90 palavras para o redator: quais pontos cobrir, 1 exemplo prático da persona, tom.",
       "word_target": 550,
       "image_prompt": "Cena fotorrealista em inglês para esta seção, sem texto, sem logos"
     }
   ],
   "faq": [
-    { "question": "Pergunta frequente sobre o tema?", "answer": "Resposta completa de 100-150 palavras." }
+    { "question": "Pergunta frequente sobre o tema?", "answer": "Resposta CURTA e completa de 50-80 palavras." }
   ]
 }
 
 REGRAS OBRIGATÓRIAS:
 - Entre ${MIN_SECTIONS} e ${MAX_SECTIONS} seções H2, cada uma sobre um aspecto distinto do tema (sem sobreposição).
-- word_target por seção: 400-700 (soma total mínima 4.500 palavras).
-- Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta com 100-150 palavras de instrução.
+- word_target por seção: 400-700 (soma total mínima 4.500 palavras) — este número é o alvo do REDATOR
+  na próxima etapa; content_brief em si fica CURTO (60-90 palavras), é só a instrução, não o texto final.
+- Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta CURTA (50-80 palavras) — objetiva, sem enrolação.
 - cover_image_prompt e image_prompt de cada seção sempre em inglês, fotorrealista, sem texto/logo.
-- Manter a persona, tom e vocabulário proibido do prompt de redação do ${brand.name}.`;
+- Manter a persona, tom e vocabulário proibido do prompt de redação do ${brand.name}.
+- Seja DIRETO: esta etapa é só planejamento, não é o artigo final. Não elabore demais.`;
 
 function buildStructureUserPrompt(keyword: string, internalLinks: InternalLink[], brief: EditorialBrief | null): string {
   const categories = AUTOBLOG_PROFILE.editorial.categories.map(c => `- ${c.slug} (${c.label})`).join('\n');
