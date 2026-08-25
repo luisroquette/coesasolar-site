@@ -39,8 +39,8 @@ export async function GET(request: NextRequest) {
   }
 
   let keyword: string | undefined;
-  const t0 = Date.now(); // DEBUG TEMPORÁRIO (25/08/2026, diagnóstico do timeout) — remover depois
-  const lap = (label: string) => console.warn(`[blog/generate][DEBUG] ${label}: +${Math.round((Date.now() - t0) / 1000)}s`);
+  const t0 = Date.now();
+  const lap = (label: string) => console.warn(`[blog/generate] ${label}: +${Math.round((Date.now() - t0) / 1000)}s`);
 
   try {
     // 1. Keyword do dia: pauta do calendário TEM precedência (o dono agenda);

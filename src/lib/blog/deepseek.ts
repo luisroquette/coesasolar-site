@@ -235,22 +235,15 @@ export async function generateArticleStructure(
   brief: EditorialBrief | null = null,
 ): Promise<ArticleStructure> {
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const tAttempt = Date.now(); // DEBUG TEMPORÁRIO 25/08/2026 — remover junto com o resto do diagnóstico
+    const tAttempt = Date.now();
     const text = await askDeepseek(
       STRUCTURE_SYSTEM_PROMPT,
       buildStructureUserPrompt(keyword, internalLinks, brief),
       STRUCTURE_MAX_TOKENS,
     );
-    console.warn(`[deepseek][DEBUG] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
+    console.warn(`[deepseek] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
-    // DEBUG TEMPORÁRIO (25/08/2026, diagnóstico do 500 em produção — remover após achar a causa):
-    if (!structure) {
-      console.warn(`[deepseek][DEBUG] parseStructure falhou. Texto bruto (800 chars):`, text.slice(0, 800));
-    } else {
-      console.warn(`[deepseek][DEBUG] isValidStructure=false. sections=${structure.sections?.length}, faq=${structure.faq?.length}, title="${structure.title}"`,
-        JSON.stringify(structure.sections?.map(s => ({ h2: s.h2, word_target: s.word_target })) ?? []));
-    }
     if (attempt === 2) break;
     console.warn(`[deepseek] Estrutura inválida na tentativa ${attempt}. Retentando...`);
   }
@@ -393,9 +386,9 @@ export async function generateArticleWithSections(
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleContent & { sectionImagePrompts: string[]; structure: ArticleStructure; bodies: string[] }> {
-  const tStructure = Date.now(); // DEBUG TEMPORÁRIO 25/08/2026 — remover junto com o resto do diagnóstico
+  const tStructure = Date.now();
   const rawStructure = await generateArticleStructure(keyword, internalLinks, brief);
-  console.warn(`[deepseek][DEBUG] estrutura total (com retries) levou ${Math.round((Date.now() - tStructure) / 1000)}s, ${rawStructure.sections.length} seções`);
+  console.warn(`[deepseek] estrutura total (com retries) levou ${Math.round((Date.now() - tStructure) / 1000)}s, ${rawStructure.sections.length} seções`);
   const structure: ArticleStructure = {
     ...rawStructure,
     sections: enrichSectionBriefs(rawStructure.sections, keyword, internalLinks),
@@ -410,7 +403,7 @@ export async function generateArticleWithSections(
     const batchBodies = await Promise.all(
       batch.map((s, j) => writeSection(keyword, s, i + j, structure.sections.length))
     );
-    console.warn(`[deepseek][DEBUG] lote de seções ${i}-${i + batch.length - 1} levou ${Math.round((Date.now() - tBatch) / 1000)}s`);
+    console.warn(`[deepseek] lote de seções ${i}-${i + batch.length - 1} levou ${Math.round((Date.now() - tBatch) / 1000)}s`);
     bodies.push(...batchBodies);
   }
 
