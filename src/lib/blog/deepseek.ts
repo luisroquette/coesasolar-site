@@ -421,18 +421,17 @@ export async function generateArticleWithSections(
     sections: enrichSectionBriefs(rawStructure.sections, keyword, internalLinks),
   };
 
-  // Seções em lotes de 3 (mesmo espírito do "batch de 3" que o cfgauss usa pra geração de
-  // imagem — evita rate limit da API do DeepSeek).
-  const bodies: string[] = [];
-  for (let i = 0; i < structure.sections.length; i += 3) {
-    const tBatch = Date.now();
-    const batch = structure.sections.slice(i, i + 3);
-    const batchBodies = await Promise.all(
-      batch.map((s, j) => writeSection(keyword, s, i + j, structure.sections.length))
-    );
-    console.warn(`[deepseek] lote de seções ${i}-${i + batch.length - 1} levou ${Math.round((Date.now() - tBatch) / 1000)}s`);
-    bodies.push(...batchBodies);
-  }
+  // Todas as seções são independentes e precisam rodar em paralelo. REGRESSÃO 26/08/2026:
+  // 9 seções em 3 lotes sequenciais consumiram 84s + 93s + o terceiro lote, depois de uma
+  // estrutura de 73s; a Vercel encerrou o run em 300s antes do insert. O retry individual de
+  // writeSection e todos os gates continuam iguais — removemos apenas o somatório serial.
+  const tSections = Date.now();
+  const bodies = await Promise.all(
+    structure.sections.map((section, index) =>
+      writeSection(keyword, section, index, structure.sections.length)
+    )
+  );
+  console.warn(`[deepseek] ${bodies.length} seções paralelas levaram ${Math.round((Date.now() - tSections) / 1000)}s`);
 
   const content = assembleArticleMarkdown(structure, bodies);
 

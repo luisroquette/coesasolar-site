@@ -393,6 +393,16 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
   });
 });
 
+describe('REGRESSÃO 26/08/2026: seções não somam lotes sequenciais até o timeout da Vercel', () => {
+  it('dispara todas as seções no mesmo Promise.all', async () => {
+    const source = await import('node:fs/promises').then(fs =>
+      fs.readFile(`${process.cwd()}/src/lib/blog/deepseek.ts`, 'utf8')
+    );
+    expect(source).toContain('structure.sections.map((section, index)');
+    expect(source).not.toContain('i += 3');
+  });
+});
+
 describe('REGRESSÃO checklist 25/08/2026: regenerateSectionsWithFeedback só reescreve seção com issue', () => {
   beforeEach(() => createMock.mockReset());
 
