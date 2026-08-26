@@ -27,4 +27,19 @@ describe('REGRESSÃO 24/08/2026: cron de retry do artigo diário', () => {
       expect(cron.schedule.endsWith('1-5')).toBe(true)
     }
   })
+
+  it('o retry roda DEPOIS do run principal no MESMO dia útil (13:30 > 09:00) — retry no dia seguinte não recuperaria o dia perdido', () => {
+    const parse = (schedule: string) => {
+      const [minute, hour] = schedule.split(' ').map(Number)
+      return { minute, hour }
+    }
+    const generateCrons = vercelJson.crons
+      .filter((c) => c.path === '/api/blog/generate')
+      .map((c) => ({ ...c, ...parse(c.schedule) }))
+    const main = generateCrons.find((c) => c.hour === 9)
+    const retry = generateCrons.find((c) => c.hour === 13 && c.minute === 30)
+    expect(main).toBeTruthy()
+    expect(retry).toBeTruthy()
+    expect(retry!.hour * 60 + retry!.minute).toBeGreaterThan(main!.hour * 60 + main!.minute)
+  })
 })
