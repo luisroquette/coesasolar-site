@@ -29,10 +29,10 @@ vi.mock('./supabase-blog', () => ({
 }));
 
 vi.mock('@/lib/autoblog-profile', () => ({
-  AUTOBLOG_PROFILE: { integrations: { imageGenerationEnabled: true } },
+  AUTOBLOG_PROFILE: { brand: { siteUrl: 'https://coesasolar.com.br' }, integrations: { imageGenerationEnabled: true } },
 }));
 
-const { generateAndUploadBodyImages } = await import('./image-gen');
+const { generateAndUploadBodyImages, generateAndUploadCover } = await import('./image-gen');
 
 beforeEach(() => {
   generateMock.mockReset();
@@ -95,5 +95,18 @@ describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva 
       { url: 'https://x/s0.webp', alt: 'kw — ilustração 1' },
       { url: 'https://x/s1.webp', alt: 'kw — ilustração 2' },
     ]);
+  });
+});
+
+describe('REGRESSÃO 26/08/2026: falha de crédito nunca publica capa nula', () => {
+  it('429 usa fallback próprio e abre circuito para não repetir chamadas pagas no corpo', async () => {
+    generateMock.mockRejectedValueOnce(Object.assign(new Error('no credits'), { status: 429 }));
+
+    const cover = await generateAndUploadCover('painéis solares', 'energia-compartilhada');
+    const body = await generateAndUploadBodyImages(['a', 'b'], 'slug', 'kw');
+
+    expect(cover).toBe('https://coesasolar.com.br/api/blog/fallback-cover?slug=energia-compartilhada');
+    expect(body).toEqual([null, null]);
+    expect(generateMock).toHaveBeenCalledTimes(1);
   });
 });

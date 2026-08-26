@@ -28,6 +28,19 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+export const MIN_ARTICLE_WORDS = 4500;
+
+export function countArticleWords(content: string): number {
+  const codeStripped = content.replace(/```[\s\S]*?```/g, '');
+  const plain = codeStripped
+    .replace(/^#{1,6}\s.*$/gm, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^[-*]\s/gm, ' ')
+    .replace(/[*>`|]/g, ' ');
+  return plain.split(/\s+/).filter(Boolean).length;
+}
+
 /** Lowercase + sem acentos + espaços colapsados — comparações tolerantes. */
 function normalize(s: string): string {
   return s
@@ -49,16 +62,16 @@ export function validateArticle(input: ValidationInput): ValidationResult {
   // Blocos de código markdown não são conteúdo do artigo — ignorar nas medições estruturais.
   const codeStripped = content.replace(/```[\s\S]*?```/g, '');
 
-  // 1. Word count ≥ 1000 (texto sem símbolos de markdown, mantendo o texto dos links)
+  // 1. Word count ≥ 4500 (contrato editorial medido também pelo Sentinel)
   const plain = codeStripped
     .replace(/^#{1,6}\s.*$/gm, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/^[-*]\s/gm, ' ')
     .replace(/[*>`|]/g, ' ');
-  const words = plain.split(/\s+/).filter(Boolean).length;
-  if (words < 1000) {
-    add('word_count', `Artigo com ${words} palavras — piso de 1000 (guias Neil/RD).`);
+  const words = countArticleWords(content);
+  if (words < MIN_ARTICLE_WORDS) {
+    add('word_count', `Artigo com ${words} palavras — piso editorial de ${MIN_ARTICLE_WORDS}.`);
   }
 
   // 2. Título: ≤ 60 chars, keyword presente e nas primeiras palavras

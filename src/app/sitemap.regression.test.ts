@@ -23,4 +23,9 @@ describe('REGRESSÃO: sitemap.xml precisa revalidar (não pode ficar preso ao bu
     expect(seconds).toBeGreaterThan(0)
     expect(seconds).toBeLessThanOrEqual(86400) // no máximo 24h — nunca mais frouxo que a página de artigo
   })
+
+  it('a publicação revalida explicitamente o sitemap', () => {
+    const route = readFileSync(join(__dirname, 'api/blog/generate/route.ts'), 'utf-8')
+    expect(semComentarios(route)).toContain("revalidatePath('/sitemap.xml')")
+  })
 })

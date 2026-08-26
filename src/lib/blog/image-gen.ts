@@ -6,6 +6,18 @@ import { uploadImageToStorage } from './supabase-blog';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
 
 const CLIENT = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let imageApiBlockedUntil = 0;
+
+export function fallbackCoverUrl(slug: string): string {
+  return `${AUTOBLOG_PROFILE.brand.siteUrl}/api/blog/fallback-cover?slug=${encodeURIComponent(slug)}`;
+}
+
+function blockImageApiTemporarily(err: unknown): void {
+  const candidate = err as { status?: number; code?: string };
+  if (candidate?.status === 429 || candidate?.code === 'credit_balance_exhausted') {
+    imageApiBlockedUntil = Date.now() + 15 * 60 * 1000;
+  }
+}
 
 /** PNG 1536x1024 do gpt-image-1 → 1280x853 webp q80 (~150-250KB; Neil: "5MB → 200KB"). */
 async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
@@ -16,6 +28,7 @@ async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
 }
 
 async function generateImageB64(prompt: string): Promise<string | null> {
+  if (Date.now() < imageApiBlockedUntil) return null;
   // gpt-image-1: sempre retorna b64_json (response_format não é aceito),
   // quality aceita 'low'|'medium'|'high'|'auto', size aceita 1024x1024|1536x1024|1024x1536|auto
   const response = (await CLIENT().images.generate({
@@ -32,17 +45,18 @@ export async function generateAndUploadCover(
   slug: string,
 ): Promise<string | null> {
   if (!AUTOBLOG_PROFILE.integrations.imageGenerationEnabled) return null;
-  if (!prompt?.trim()) return null; // prompt vazio = chamada paga desperdiçada
+  if (!prompt?.trim()) return fallbackCoverUrl(slug); // sem chamada paga e sem capa nula
 
   try {
     const b64 = await generateImageB64(prompt);
-    if (!b64) return null;
+    if (!b64) return fallbackCoverUrl(slug);
 
     const webp = await optimizeToWebp(Buffer.from(b64, 'base64'));
     return await uploadImageToStorage(`${slug}.webp`, webp, 'image/webp');
   } catch (err) {
-    console.error('[image-gen] Falhou, artigo será publicado sem capa:', err);
-    return null;
+    blockImageApiTemporarily(err);
+    console.error('[image-gen] Falhou, usando capa fallback própria:', err);
+    return fallbackCoverUrl(slug);
   }
 }
 
@@ -107,6 +121,7 @@ export async function generateAndUploadBodyImages(
   keyword: string,
 ): Promise<Array<{ url: string; alt: string } | null>> {
   if (!AUTOBLOG_PROFILE.integrations.imageGenerationEnabled) return prompts.map(() => null);
+  if (Date.now() < imageApiBlockedUntil) return prompts.map(() => null);
 
   const results: Array<{ url: string; alt: string } | null> = new Array(prompts.length).fill(null);
   for (let i = 0; i < prompts.length; i += 3) {

@@ -17,7 +17,7 @@ import {
 } from '@/lib/blog/deepseek';
 import { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } from '@/lib/blog/image-gen';
 import { injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
-import { validateArticle } from '@/lib/blog/validate';
+import { countArticleWords, MIN_ARTICLE_WORDS, validateArticle } from '@/lib/blog/validate';
 import { runQualityGateLoop } from '@/lib/blog/quality-gate';
 import { scoreInternalLinks } from '@/lib/blog/internal-links';
 import { distributeArticle, buildDistributionArticle } from '@/lib/blog/distribution';
@@ -181,6 +181,11 @@ export async function GET(request: NextRequest) {
       console.warn(`[blog/generate] Quality gate score final: ${gateResult.judged.score}`);
     }
 
+    const finalWordCount = countArticleWords(finalContentWithCtas);
+    if (finalWordCount < MIN_ARTICLE_WORDS) {
+      throw new Error(`article_below_${MIN_ARTICLE_WORDS}_words:${finalWordCount}`);
+    }
+
     // 4. Salvar artigo (com collision handling interno)
     const finalSlug = await insertArticle({
       slug: article.slug,
@@ -205,6 +210,7 @@ export async function GET(request: NextRequest) {
     // 6. Revalidar páginas ISR — inclui a categoria do artigo novo (senão fica 1h stale)
     revalidatePath('/blog');
     revalidatePath(`/blog/${finalSlug}`);
+    revalidatePath('/sitemap.xml');
     if (article.category) revalidatePath(`/categoria/${article.category}`);
 
     // 7. Divulgação pós-publish: plugs ativos do perfil (falha de canal não derruba o pipeline)

@@ -23,7 +23,7 @@ function makeValidInput(overrides: Partial<ValidationInput> = {}): ValidationInp
     '',
     '## Como avaliar solução b2b com método',
     '',
-    fill(20),
+    fill(280),
     '',
     '> "Quem compara custo total antes de assinar economiza retrabalho." — Ana Ribeiro, consultora de compras B2B',
     '',
@@ -96,7 +96,7 @@ describe('REGRESSÃO: validador pós-geração (checklist Neil/RD)', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('word_count: reprova artigo com menos de 1000 palavras', () => {
+  it('word_count: reprova artigo com menos de 4500 palavras', () => {
     const input = makeValidInput();
     input.content = 'Artigo curto demais para ranquear.\n\n## Só isso\n\nFim.';
     expect(rules(input)).toContain('word_count');
