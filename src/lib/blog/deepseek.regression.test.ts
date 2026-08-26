@@ -321,6 +321,19 @@ describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure n
     const args = createMock.mock.calls[0][0];
     expect(args.max_tokens).toBeGreaterThanOrEqual(4000); // generoso o bastante pra 9 seções + FAQ-7
     expect(args.model).toBe('deepseek-v4-flash');
+    expect(args.response_format).toEqual({ type: 'json_object' });
+    expect(args.reasoning_effort).toBe('low');
+  });
+
+  it('finish_reason=length fica explícito no log antes de lançar structure_failed', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    createMock.mockResolvedValue({
+      choices: [{ finish_reason: 'length', message: { content: '{"sections":[' } }],
+    });
+
+    await expect(generateArticleStructure('placa solar')).rejects.toThrow('deepseek_structure_failed');
+    expect(warnSpy.mock.calls.some((call) => String(call[0]).includes('truncada por max_tokens'))).toBe(true);
+    warnSpy.mockRestore();
   });
 });
 

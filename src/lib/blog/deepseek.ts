@@ -162,13 +162,13 @@ Gere a ESTRUTURA de um artigo (não o texto completo). Retorne SOMENTE JSON vál
   "sections": [
     {
       "h2": "Título da seção (H2)",
-      "content_brief": "Instrução CURTA de 60-90 palavras para o redator: quais pontos cobrir, 1 exemplo prático da persona, tom.",
+      "content_brief": "Instrução CURTA de 20-35 palavras: pontos essenciais e 1 exemplo prático.",
       "word_target": 550,
       "image_prompt": "Cena fotorrealista em inglês para esta seção, sem texto, sem logos"
     }
   ],
   "faq": [
-    { "question": "Pergunta frequente sobre o tema?", "answer": "Resposta CURTA e completa de 50-80 palavras." }
+    { "question": "Pergunta frequente sobre o tema?", "answer": "Resposta CURTA e completa de 20-40 palavras." }
   ],
   "summary_bullets": ["Bullet auto-contido 1", "Bullet auto-contido 2", "Bullet auto-contido 3"]
 }
@@ -177,7 +177,7 @@ REGRAS OBRIGATÓRIAS:
 - Entre ${MIN_SECTIONS} e ${MAX_SECTIONS} seções H2, cada uma sobre um aspecto distinto do tema (sem sobreposição).
 - word_target por seção: 400-700 (soma total mínima 4.500 palavras) — este número é o alvo do REDATOR
   na próxima etapa; content_brief em si fica CURTO (60-90 palavras), é só a instrução, não o texto final.
-- Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta CURTA (50-80 palavras) — objetiva, sem enrolação.
+- Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta CURTA (20-40 palavras) — objetiva, sem enrolação.
 - summary_bullets: 3 a 5 frases CURTAS, cada uma auto-contida (entrega a ideia sozinha, sem depender
   do resto do artigo) — vira o box "Em resumo" citável por IA de busca.
 - cover_image_prompt e image_prompt de cada seção sempre em inglês, fotorrealista, sem texto/logo.
@@ -782,9 +782,20 @@ async function askDeepseek(system: string, user: string, maxTokens?: number): Pr
       { role: 'user', content: user },
     ],
     temperature: 0.7,
+    // A chamada com maxTokens é a estrutura JSON. JSON mode impede cercas/texto extra;
+    // reasoning low preserva o orçamento para o conteúdo visível em vez de consumir o
+    // teto pensando e truncar no meio de `sections` (incidente real de 26/08/2026).
+    ...(maxTokens !== undefined ? {
+      response_format: { type: 'json_object' as const },
+      reasoning_effort: 'low' as const,
+    } : {}),
     ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
   });
-  return response.choices[0]?.message?.content ?? '';
+  const choice = response.choices[0];
+  if (choice?.finish_reason === 'length') {
+    console.warn('[deepseek] Resposta truncada por max_tokens antes de fechar o JSON.');
+  }
+  return choice?.message?.content ?? '';
 }
 
 const OUTLINE_SYSTEM = `Você planeja artigos de blog em português brasileiro para ${brand.name}.

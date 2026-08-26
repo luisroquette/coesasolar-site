@@ -8,9 +8,10 @@
 // foram migrados 1:1 e verificados por hash MD5; prefixo coesa_ mantido de
 // proposito so pra nao precisar tocar em codigo.
 //
-// Escritas do pipeline (artigo diário + run log) usam RPCs SECURITY DEFINER
+// Escritas do pipeline (artigo diário + run log) usam RPCs server-only
 // (coesa_blog_claim_run / coesa_blog_insert_article / coesa_blog_insert_run_log)
-// que validam o CRON_SECRET por hash — sem service_role parado no runtime.
+// executadas com service_role e revogadas de anon/authenticated. As funções são
+// SECURITY INVOKER: não existe segredo/hash embutido nem bypass de RLS público.
 // Novas tabelas (comentários, métricas, links, pauta, guest posts) são
 // servidor-only: escrevem com service role via getServiceClient(), sempre
 // atrás de rotas autenticadas (CRON_SECRET ou chave de API própria).
@@ -109,7 +110,7 @@ export function interpretClaimResult(
 
 /** Claims today's run before generation, preventing concurrent cron duplicates. */
 export async function claimBlogRunToday(): Promise<BlogClaimResult> {
-  const supabase = getClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase.rpc('coesa_blog_claim_run', {
     p_secret: getCronSecret(),
   });
@@ -118,7 +119,7 @@ export async function claimBlogRunToday(): Promise<BlogClaimResult> {
 }
 
 export async function getPublishedKeywords(): Promise<string[]> {
-  const supabase = getClient();
+  const supabase = getServiceClient();
   const { data } = await supabase
     .from(TABLES.articles)
     .select('keyword')
@@ -178,7 +179,7 @@ export async function insertRunLog(params: {
   status: 'success' | 'error';
   error?: string;
 }): Promise<void> {
-  const supabase = getClient();
+  const supabase = getServiceClient();
   const { error } = await supabase.rpc('coesa_blog_insert_run_log', {
     p_secret: getCronSecret(),
     p_keyword: params.keyword ?? null,
