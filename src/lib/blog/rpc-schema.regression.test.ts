@@ -40,4 +40,13 @@ describe('REGRESSÃO 26/08/2026: RPCs do autoblog são versionadas e server-only
     const writeRegion = client.slice(client.indexOf('export async function claimBlogRunToday'))
     expect(writeRegion.match(/getServiceClient\(\)/g)?.length).toBeGreaterThanOrEqual(3)
   })
+
+  it('insertArticle comum chama a RPC com service role, nunca com anon', () => {
+    const insertRegion = client.slice(
+      client.indexOf('export async function insertArticle'),
+      client.indexOf('export async function insertRunLog'),
+    )
+    expect(insertRegion).not.toContain('getClient()')
+    expect(insertRegion.match(/getServiceClient\(\)/g)).toHaveLength(2)
+  })
 })

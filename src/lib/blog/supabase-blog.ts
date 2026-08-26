@@ -156,7 +156,7 @@ export async function insertArticle(input: InsertArticleInput): Promise<string> 
     throw new Error('slug_collision');
   }
 
-  const supabase = getClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase.rpc('coesa_blog_insert_article', {
     p_secret: getCronSecret(),
     p_slug: input.slug,
