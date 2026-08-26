@@ -9,6 +9,10 @@
       "schedule": "30 13 * * 1-5"
     },
     {
+      "path": "/api/blog/generate",
+      "schedule": "10 18 * * 1-5"
+    },
+    {
       "path": "/api/blog/audit-links",
       "schedule": "0 10 * * 1"
     }
