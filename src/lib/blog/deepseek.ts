@@ -207,10 +207,25 @@ export function parseStructure(text: string): ArticleStructure | null {
   }
 }
 
+/** Normaliza texto para casar keyword: minúsculas, sem acentos e SEM pontuação.
+ *  REGRESSÃO 26/08/2026: a comparação contígua estrita reprovava títulos SEO naturais
+ *  que separam a keyword com pontuação — ex. "Geração Distribuída Compartilhada: Vale a
+ *  Pena?" (o ":" entre "compartilhada" e "vale" quebrava o `includes`) e o pipeline
+ *  ficava preso no seed sem publicar. A keyword continua precisando aparecer na ordem;
+ *  só o sinal gráfico deixa de reprovar. */
+export function normalizeKeywordText(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function isValidStructure(s: ArticleStructure, keyword: string): boolean {
-  const norm = (str: string) => str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   return (
-    !!s?.title && norm(s.title).includes(norm(keyword)) &&
+    !!s?.title && normalizeKeywordText(s.title).includes(normalizeKeywordText(keyword)) &&
     !!s.slug && !!s.meta_desc && !!s.cover_image_prompt &&
     Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
     s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
@@ -236,9 +251,16 @@ export async function generateArticleStructure(
 ): Promise<ArticleStructure> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     const tAttempt = Date.now();
+    // REGRESSÃO 26/08/2026: a 2ª tentativa repetia o MESMO prompt e, quando o defeito
+    // era determinístico (ex.: título sem a keyword exata), falhava do mesmo jeito. A
+    // re-tentativa agora recebe o motivo do fracasso pra corrigir em vez de repetir o erro.
+    const retryHint =
+      attempt === 1
+        ? ''
+        : `\n\nATENÇÃO: a tentativa anterior foi rejeitada. O campo "title" DEVE conter a keyword EXATA "${keyword}" nas primeiras palavras, com a ordem preservada (a pontuação pode separar as palavras). Retorne SOMENTE o JSON válido da estrutura, sem texto ao redor.`;
     const text = await askDeepseek(
       STRUCTURE_SYSTEM_PROMPT,
-      buildStructureUserPrompt(keyword, internalLinks, brief),
+      buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
       STRUCTURE_MAX_TOKENS,
     );
     console.warn(`[deepseek] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
@@ -728,12 +750,10 @@ export function parseOutline(text: string): ArticleOutline | null {
 
 /** 4 a 6 H2s e keyword no título — o outline só vale se passa daqui. */
 export function isValidOutline(outline: ArticleOutline, keyword: string): boolean {
-  const norm = (s: string) =>
-    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   return (
     outline.h2s.length >= 4 &&
     outline.h2s.length <= 6 &&
-    norm(outline.title).includes(norm(keyword))
+    normalizeKeywordText(outline.title).includes(normalizeKeywordText(keyword))
   );
 }
 

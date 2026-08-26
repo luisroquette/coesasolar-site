@@ -531,3 +531,72 @@ describe('REGRESSÃO 25/08/2026 (achado E2E): fixSimpleValidationIssues corrige 
     expect(fixed.meta_desc.length).toBeLessThanOrEqual(155);
   });
 });
+
+describe('REGRESSÃO 26/08/2026: isValidStructure aceita keyword separada por pontuação no título (pipeline preso no seed)', () => {
+  const makeEstrutura = (title: string) => ({
+    title,
+    page_title: title,
+    slug: 'geracao-distribuida-compartilhada-vale-a-pena',
+    meta_desc: 'meta',
+    cover_image_prompt: 'cover',
+    cover_alt: 'alt',
+    category: 'faq',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`,
+      content_brief: 'brief',
+      word_target: 500,
+      image_prompt: 'p',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
+  });
+
+  it('título com ":" separando a keyword ainda é aceito (pontuação não reprova)', () => {
+    const estrutura = makeEstrutura('Geração Distribuída Compartilhada: Vale a Pena? Entenda os Custos');
+    expect(isValidStructure(estrutura, 'geração distribuída compartilhada vale a pena')).toBe(true);
+  });
+
+  it('título sem a keyword (ordem quebrada) continua reprovado', () => {
+    const estrutura = makeEstrutura('Vale a Pena Investir em Geração Compartilhada?');
+    expect(isValidStructure(estrutura, 'geração distribuída compartilhada vale a pena')).toBe(false);
+  });
+});
+
+describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª tentativa em vez de repetir o mesmo prompt', () => {
+  const makeEstrutura = (title: string) => ({
+    title,
+    page_title: title,
+    slug: 'geracao-distribuida-compartilhada-vale-a-pena',
+    meta_desc: 'meta',
+    cover_image_prompt: 'cover',
+    cover_alt: 'alt',
+    category: 'faq',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`,
+      content_brief: 'brief',
+      word_target: 500,
+      image_prompt: 'p',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
+  });
+
+  it('2ª tentativa recebe instrução com a keyword exata quando a 1ª estrutura é rejeitada', async () => {
+    const invalida = makeEstrutura('Vale a Pena Investir em Geração Compartilhada?');
+    const valida = makeEstrutura('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(invalida) } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    const result = await generateArticleStructure('geração distribuída compartilhada vale a pena');
+
+    expect(result.title).toBe('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    expect(createMock).toHaveBeenCalledTimes(2);
+
+    const firstUser = createMock.mock.calls[0][0].messages[1].content;
+    const secondUser = createMock.mock.calls[1][0].messages[1].content;
+    expect(firstUser).not.toContain('tentativa anterior foi rejeitada');
+    expect(secondUser).toContain('tentativa anterior foi rejeitada');
+    expect(secondUser).toContain('geração distribuída compartilhada vale a pena');
+  });
+});
