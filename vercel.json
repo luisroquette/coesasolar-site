@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/blog/generate",
-      "schedule": "10 18 * * 1-5"
+      "schedule": "30 18 * * 1-5"
     },
     {
       "path": "/api/blog/audit-links",
