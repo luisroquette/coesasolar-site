@@ -90,13 +90,21 @@ export type BlogClaimResult = 'claimed' | 'already_run' | 'error';
 /** Pura: interpreta a resposta do RPC de claim SEM confundir erro de infra com "já rodou hoje".
  *  REGRESSÃO 17/08/2026: um erro no coesa_blog_claim_run (RPC ausente/secret/transitório)
  *  virava `false` e a rota respondia 200 "already_run_today" — dia perdido em silêncio
- *  (sem artigo, sem run_log, sem erro). Agora erro vira 'error' e a rota responde 500. */
+ *  (sem artigo, sem run_log, sem erro). Agora erro vira 'error' e a rota responde 500.
+ *
+ *  REGRESSÃO 18/08/2026 (dia útil perdido): o MESMO buraco ainda existia para o caso
+ *  em que o RPC responde sem erro mas devolve `data` nulo/não-booleano — o código antigo
+ *  caía em `data === true ? ... : 'already_run'` e respondia 200 "already_run_today",
+ *  pulando o dia em silêncio. Só `false` explícito significa "já rodou"; qualquer outro
+ *  retorno inesperado agora vira 'error' (500, visível e re-tentável pelo cron das 13:30). */
 export function interpretClaimResult(
   data: unknown,
   error: { message?: string } | null,
 ): BlogClaimResult {
   if (error) return 'error';
-  return data === true ? 'claimed' : 'already_run';
+  if (data === true) return 'claimed';
+  if (data === false) return 'already_run';
+  return 'error';
 }
 
 /** Claims today's run before generation, preventing concurrent cron duplicates. */
