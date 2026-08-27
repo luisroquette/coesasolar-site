@@ -37,9 +37,9 @@ Deno.serve(async (req) => {
     const body: CorrectionRequest = await req.json();
     const { client_message, wrong_response, issues, reasoning, funnel_stage } = body;
 
-    const OPENROUTER_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+    const OPENROUTER_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
     if (!OPENROUTER_API_KEY) {
-      throw new Error("COESA_PROPOSTAS_OPENROUTER_API_KEY not configured");
+      throw new Error("COESASOLAR_OPENROUTER_API_KEY not configured");
     }
 
     const prompt = `Você é um especialista em atendimento comercial da COESA Energia (energia solar por assinatura).

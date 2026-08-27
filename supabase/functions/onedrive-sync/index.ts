@@ -24,7 +24,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID');
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET');
 const MICROSOFT_TENANT_ID = Deno.env.get('MICROSOFT_TENANT_ID');
-const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
 const OPENAI_API_KEY = LOVABLE_API_KEY;
 
 interface SyncRequest {
@@ -794,7 +794,7 @@ serve(async (req) => {
     // MODO LEGADO: Processamento direto (mantido para compatibilidade)
     // ========================================
     if (!LOVABLE_API_KEY || !OPENAI_API_KEY) {
-      throw new Error('Missing AI credentials. Configure COESA_PROPOSTAS_OPENROUTER_API_KEY.');
+      throw new Error('Missing AI credentials. Configure COESASOLAR_OPENROUTER_API_KEY.');
     }
 
     let added = 0, updated = 0, skipped = 0, failed = 0;
