@@ -74,7 +74,7 @@ export default async function SetupPage() {
 
   const supabase =
     envPresent('BLOG_SUPABASE_URL') && envPresent('BLOG_SUPABASE_SERVICE_ROLE_KEY');
-  const deepseek = envPresent('COESASOLAR_OPENROUTER_API_KEY') || envPresent('OPENROUTER_API_KEY');
+  const deepseek = envPresent('COESASOLAR_OPENROUTER_API_KEY');
   const gsc =
     envPresent('GOOGLE_CLIENT_ID') &&
     envPresent('GOOGLE_CLIENT_SECRET') &&

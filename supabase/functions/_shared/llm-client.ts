@@ -112,7 +112,7 @@ function openRouterModel(model: string): string {
 }
 
 function openRouterKey(): string {
-  const key = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') ?? Deno.env.get('OPENROUTER_API_KEY');
+  const key = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
   if (!key) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
   return key;
 }

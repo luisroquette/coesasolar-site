@@ -13,4 +13,14 @@ describe('LLM custom provider routing', () => {
     expect(source).not.toContain('https://api.deepseek.com/v1');
     expect(source.match(/https:\/\/openrouter\.ai\/api\/v1/g)).toHaveLength(2);
   });
+
+  it('requests only the dedicated project key', () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), 'src/screens/AgentSettings.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('COESASOLAR_OPENROUTER_API_KEY');
+    expect(source).not.toContain("? 'OPENROUTER_API_KEY'");
+  });
 });

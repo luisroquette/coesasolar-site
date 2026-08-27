@@ -354,7 +354,7 @@ import { validateSofiaWebhook, validateZApiWebhook, type ValidationResult } from
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') ?? Deno.env.get('OPENROUTER_API_KEY');
+const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
 
 // Wrapper for detectTechnicalIssue that passes the API key
 const detectTechnicalIssue = (message: string) => detectTechnicalIssueShared(message, LOVABLE_API_KEY || undefined);
