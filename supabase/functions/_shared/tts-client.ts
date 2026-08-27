@@ -5,7 +5,7 @@
  * 
  * Provides unified TTS generation with:
  * - ElevenLabs primary (multilingual_v2)
- * - OpenAI fallback (tts-1)
+ * - OpenRouter fallback (Grok Voice TTS)
  * - Automatic fallback tracking and auto-disable
  * - Text sanitization for voice output
  * 
@@ -71,8 +71,8 @@ const FALLBACK_TTS_CONFIG: TTSConfigDynamic = {
   fallbackWindowMinutes: 30,
   primaryModel: 'eleven_multilingual_v2',
   turboModel: 'eleven_turbo_v2_5',
-  openaiModel: 'tts-1',
-  openaiVoice: 'nova',
+  openaiModel: 'x-ai/grok-voice-tts-1.0',
+  openaiVoice: 'eve',
   minTextLength: 10,
   shortenMaxLength: 120,
   stability: 0.5,
@@ -351,14 +351,14 @@ export async function registerElevenLabsFallback(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Generate audio using OpenAI TTS API
+ * Generate fallback audio through OpenRouter TTS
  */
-async function generateOpenAIAudio(
+async function generateOpenRouterAudio(
   text: string,
   apiKey: string
 ): Promise<ArrayBuffer | null> {
   const config = getTTSConfig();
-  console.log(`[TTS] Trying OpenAI TTS for ${text.length} chars`);
+  console.log(`[TTS] Trying OpenRouter TTS fallback for ${text.length} chars`);
   
   try {
     const response = await fetch('https://openrouter.ai/api/v1/audio/speech', {
@@ -377,15 +377,15 @@ async function generateOpenAIAudio(
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[TTS] OpenAI TTS error: HTTP ${response.status} - ${errText.substring(0, 300)}`);
+      console.error(`[TTS] OpenRouter TTS error: HTTP ${response.status} - ${errText.substring(0, 300)}`);
       return null;
     }
 
     const audioData = await response.arrayBuffer();
-    console.log(`[TTS] OpenAI TTS success: ${audioData.byteLength} bytes`);
+    console.log(`[TTS] OpenRouter TTS success: ${audioData.byteLength} bytes`);
     return audioData;
   } catch (err) {
-    console.error('[TTS] OpenAI TTS exception:', err instanceof Error ? err.message : String(err));
+    console.error('[TTS] OpenRouter TTS exception:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }
@@ -460,7 +460,7 @@ async function generateElevenLabsAudio(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Generate voice audio from text using ElevenLabs (primary) or OpenAI (fallback)
+ * Generate voice audio from text using ElevenLabs (primary) or OpenRouter (fallback)
  * 
  * @param text - Text to convert to speech
  * @param configInput - TTS configuration (API keys, voice ID, etc.)
@@ -485,7 +485,7 @@ export async function generateVoiceAudio(
   console.log(`[TTS] Voice ID: ${voiceId}`);
   
   if (!elevenLabsApiKey && !openaiApiKey) {
-    console.log('[TTS] ❌ No TTS API keys configured (ElevenLabs or OpenAI), skipping voice generation');
+    console.log('[TTS] ❌ No TTS API keys configured (ElevenLabs or OpenRouter), skipping voice generation');
     return null;
   }
   
@@ -500,18 +500,18 @@ export async function generateVoiceAudio(
   console.log(`[TTS] Sanitized text (${sanitizedText.length} chars): "${sanitizedText.substring(0, 100)}..."`);
   
   try {
-    // If ElevenLabs not configured, try OpenAI directly
+    // If ElevenLabs is not configured, try OpenRouter directly.
     if (!elevenLabsApiKey) {
-      console.log('[TTS] ElevenLabs not configured, trying OpenAI TTS directly');
-      const openaiAudio = await generateOpenAIAudio(sanitizedText, openaiApiKey!);
-      if (openaiAudio) {
+      console.log('[TTS] ElevenLabs not configured, trying OpenRouter TTS directly');
+      const openRouterAudio = await generateOpenRouterAudio(sanitizedText, openaiApiKey!);
+      if (openRouterAudio) {
         return { 
-          audioBase64: arrayBufferToBase64(openaiAudio), 
-          size: openaiAudio.byteLength, 
+          audioBase64: arrayBufferToBase64(openRouterAudio),
+          size: openRouterAudio.byteLength,
           format: 'mp3' 
         };
       }
-      console.log('[TTS] OpenAI TTS failed, no audio generated');
+      console.log('[TTS] OpenRouter TTS failed, no audio generated');
       return null;
     }
     
@@ -547,20 +547,20 @@ export async function generateVoiceAudio(
       };
     }
     
-    // ElevenLabs failed - register fallback and try OpenAI
-    console.log('[TTS] ElevenLabs failed, falling back to OpenAI TTS');
+    // ElevenLabs failed - register fallback and try OpenRouter.
+    console.log('[TTS] ElevenLabs failed, falling back to OpenRouter TTS');
     
     if (supabaseUrl && supabaseKey) {
       await registerElevenLabsFallback(supabaseUrl, supabaseKey);
     }
     
     if (openaiApiKey) {
-      const openaiAudio = await generateOpenAIAudio(sanitizedText, openaiApiKey);
-      if (openaiAudio) {
-        console.log(`[TTS] OpenAI fallback audio: ${openaiAudio.byteLength} bytes (MP3)`);
+      const openRouterAudio = await generateOpenRouterAudio(sanitizedText, openaiApiKey);
+      if (openRouterAudio) {
+        console.log(`[TTS] OpenRouter fallback audio: ${openRouterAudio.byteLength} bytes (MP3)`);
         return {
-          audioBase64: arrayBufferToBase64(openaiAudio),
-          size: openaiAudio.byteLength,
+          audioBase64: arrayBufferToBase64(openRouterAudio),
+          size: openRouterAudio.byteLength,
           format: 'mp3'
         };
       }
