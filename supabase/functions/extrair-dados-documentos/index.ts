@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
-const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
+const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 

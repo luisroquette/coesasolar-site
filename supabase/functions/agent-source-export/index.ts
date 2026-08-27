@@ -165,7 +165,7 @@ function generatePlaceholderSource(agent: any, webhookName: string): string {
 
 function generateReadme(agent: any): string {
   const envVars = [
-    'COESASOLAR_OPENROUTER_API_KEY',
+    'COESA_PROPOSTAS_OPENROUTER_API_KEY',
     'SUPABASE_URL',
     'SUPABASE_SERVICE_ROLE_KEY',
     'ZAPI_INSTANCE_ID',

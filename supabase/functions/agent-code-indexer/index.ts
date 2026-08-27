@@ -15,7 +15,7 @@ import {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const OPENAI_API_KEY = (Deno.env.get('COESASOLAR_OPENROUTER_API_KEY'))!;
+const OPENAI_API_KEY = (Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY'))!;
 
 // ═══════════════════════════════════════════════════════════════
 // FILES TO INDEX (curated list — business logic only)
