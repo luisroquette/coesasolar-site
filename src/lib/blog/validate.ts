@@ -3,7 +3,8 @@
 // Neil Patel / RD Station no artigo REAL, não confia no checklist do prompt.
 // Falha → o pipeline regenera uma vez; se falhar de novo, publica com aviso.
 
-import { MIN_SECTIONS, MAX_SECTIONS } from './deepseek';
+import { MIN_ARTICLE_WORDS, MIN_SECTIONS, MAX_SECTIONS } from './deepseek';
+export { MIN_ARTICLE_WORDS } from './deepseek';
 
 export interface ValidationInput {
   keyword: string;
@@ -28,7 +29,6 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
-export const MIN_ARTICLE_WORDS = 4500;
 
 export function countArticleWords(content: string): number {
   const codeStripped = content.replace(/```[\s\S]*?```/g, '');

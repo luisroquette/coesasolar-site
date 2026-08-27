@@ -234,7 +234,7 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
     sections: Array.from({ length: 7 }, (_, i) => ({
       h2: `Seção ${i + 1}`,
       content_brief: 'Instrução de 150-200 palavras para o redator.',
-      word_target: 500,
+      word_target: 650,
       image_prompt: 'Photorealistic detail shot, no text',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
@@ -246,6 +246,10 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
   });
   it('estrutura com 3 seções é inválida (mínimo 7)', () => {
     expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: ESTRUTURA_VALIDA.sections.slice(0, 3) }, 'placa solar')).toBe(false);
+  });
+  it('estrutura cuja soma dos alvos fica abaixo de 4.500 palavras é inválida', () => {
+    const sections = ESTRUTURA_VALIDA.sections.map(section => ({ ...section, word_target: 500 }));
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections }, 'placa solar')).toBe(false);
   });
   it('estrutura com 10 seções é inválida (máximo 9)', () => {
     const extra = [...ESTRUTURA_VALIDA.sections, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!];
@@ -305,7 +309,7 @@ describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure n
     cover_alt: 'alt',
     category: 'guias',
     sections: Array.from({ length: 7 }, (_, i) => ({
-      h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 500, image_prompt: 'p',
+      h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 650, image_prompt: 'p',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `P${i}?`, answer: 'R' })),
     summary_bullets: ['B1', 'B2', 'B3'],
@@ -349,7 +353,7 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
     sections: Array.from({ length: 7 }, (_, i) => ({
       h2: `Seção ${i + 1}`,
       content_brief: 'Instrução de 150-200 palavras para o redator.',
-      word_target: 500,
+      word_target: 650,
       image_prompt: 'Photorealistic detail shot, no text',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
@@ -478,7 +482,7 @@ describe('REGRESSÃO checklist 25/08/2026: assembleArticleMarkdown é reusada po
 
 describe('REGRESSÃO 25/08/2026 (achado E2E): enrichSectionBriefs injeta obrigações editoriais sem chamada de rede', () => {
   const SECOES_7 = Array.from({ length: 7 }, (_, i) => ({
-    h2: `Seção ${i + 1}`, content_brief: `brief ${i + 1}`, word_target: 500, image_prompt: 'p',
+    h2: `Seção ${i + 1}`, content_brief: `brief ${i + 1}`, word_target: 650, image_prompt: 'p',
   }));
   const LINKS = [{ label: 'Guia de instalação', url: '/blog/guia-instalacao' }];
 
@@ -567,7 +571,7 @@ describe('REGRESSÃO 26/08/2026: isValidStructure aceita keyword separada por po
     sections: Array.from({ length: 7 }, (_, i) => ({
       h2: `Seção ${i + 1}`,
       content_brief: 'brief',
-      word_target: 500,
+      word_target: 650,
       image_prompt: 'p',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
@@ -597,7 +601,7 @@ describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª te
     sections: Array.from({ length: 7 }, (_, i) => ({
       h2: `Seção ${i + 1}`,
       content_brief: 'brief',
-      word_target: 500,
+      word_target: 650,
       image_prompt: 'p',
     })),
     faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
