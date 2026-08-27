@@ -21,7 +21,7 @@ interface HesitationAIConfig {
 
 const DEFAULT_HESITATION_CONFIG: HesitationAIConfig = {
   model: 'google/gemini-2.5-flash-lite',
-  gatewayUrl: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+  gatewayUrl: 'https://openrouter.ai/api/v1/chat/completions',
   temperature: 0.1,
   maxTokens: 200,
   minLength: 30,

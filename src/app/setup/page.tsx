@@ -74,12 +74,12 @@ export default async function SetupPage() {
 
   const supabase =
     envPresent('BLOG_SUPABASE_URL') && envPresent('BLOG_SUPABASE_SERVICE_ROLE_KEY');
-  const deepseek = envPresent('DEEPSEEK_API_KEY');
+  const deepseek = envPresent('COESASOLAR_OPENROUTER_API_KEY') || envPresent('OPENROUTER_API_KEY');
   const gsc =
     envPresent('GOOGLE_CLIENT_ID') &&
     envPresent('GOOGLE_CLIENT_SECRET') &&
     envPresent('GOOGLE_REFRESH_TOKEN');
-  const images = envPresent('OPENAI_API_KEY');
+  const images = deepseek;
   const trello =
     envPresent('TRELLO_API_KEY') && envPresent('TRELLO_TOKEN') && envPresent('TRELLO_LIST_ID');
   const telegram =
@@ -113,7 +113,7 @@ export default async function SetupPage() {
             {
               name: 'DeepSeek (redação)',
               ready: deepseek,
-              action: 'Defina DEEPSEEK_API_KEY.',
+              action: 'Defina COESASOLAR_OPENROUTER_API_KEY.',
             },
             {
               name: 'CRON_SECRET',
@@ -149,7 +149,7 @@ export default async function SetupPage() {
               ready: images && AUTOBLOG_PROFILE.integrations.imageGenerationEnabled,
               action: images
                 ? 'Ligue imageGenerationEnabled no perfil e crie o bucket público blog-covers no Supabase.'
-                : 'Defina OPENAI_API_KEY, crie o bucket blog-covers e ligue imageGenerationEnabled.',
+                : 'Defina COESASOLAR_OPENROUTER_API_KEY, crie o bucket blog-covers e ligue imageGenerationEnabled.',
             },
           ]}
         />

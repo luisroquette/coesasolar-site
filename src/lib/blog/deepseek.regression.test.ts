@@ -199,25 +199,25 @@ describe('REGRESSÃO: deepseek — chamadas usam um model id ativo na DeepSeek, 
   // chamavam com 'deepseek-chat' — desde a desativação, TODA chamada falha no provider,
   // quebrando a geração de artigo em produção sem nenhum sinal além do erro de rede.
   // Trava aqui: nunca o id legado, e usa o id de custo equivalente (flash, não pro).
-  it('generateArticle chama com model="deepseek-v4-flash" (nunca o legado "deepseek-chat")', async () => {
+  it('generateArticle chama o modelo DeepSeek exato via OpenRouter', async () => {
     createMock.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(ARTICLE) } }] });
 
     await generateArticle('energia solar residencial');
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const callArgs = createMock.mock.calls[0][0];
-    expect(callArgs.model).toBe('deepseek-v4-flash');
+    expect(callArgs.model).toBe('deepseek/deepseek-v4-flash');
     expect(callArgs.model).not.toBe('deepseek-chat');
   });
 
-  it('regenerateWithFeedback (askDeepseek) chama com model="deepseek-v4-flash" (nunca o legado "deepseek-chat")', async () => {
+  it('regenerateWithFeedback chama o modelo DeepSeek exato via OpenRouter', async () => {
     createMock.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(ARTICLE) } }] });
 
     await regenerateWithFeedback(ARTICLE, ISSUES);
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const callArgs = createMock.mock.calls[0][0];
-    expect(callArgs.model).toBe('deepseek-v4-flash');
+    expect(callArgs.model).toBe('deepseek/deepseek-v4-flash');
     expect(callArgs.model).not.toBe('deepseek-chat');
   });
 });
@@ -268,7 +268,7 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
     const args = createMock.mock.calls[0][0];
     expect(args.max_tokens).toBeGreaterThanOrEqual(1200); // ~2 tokens/palavra PT-BR de folga
-    expect(args.model).toBe('deepseek-v4-flash');
+    expect(args.model).toBe('deepseek/deepseek-v4-flash');
   });
 
   it('REGRESSÃO 25/08/2026 (achado E2E: 1 de 8 seções voltou vazia em produção): retenta 1x se vier vazio', async () => {
@@ -320,7 +320,7 @@ describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure n
 
     const args = createMock.mock.calls[0][0];
     expect(args.max_tokens).toBeGreaterThanOrEqual(4000); // generoso o bastante pra 9 seções + FAQ-7
-    expect(args.model).toBe('deepseek-v4-flash');
+    expect(args.model).toBe('deepseek/deepseek-v4-flash');
     expect(args.response_format).toEqual({ type: 'json_object' });
     expect(args.reasoning_effort).toBe('low');
   });

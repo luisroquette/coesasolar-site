@@ -37,9 +37,9 @@ Deno.serve(async (req) => {
     const body: CorrectionRequest = await req.json();
     const { client_message, wrong_response, issues, reasoning, funnel_stage } = body;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("COESASOLAR_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) {
+      throw new Error("COESASOLAR_OPENROUTER_API_KEY not configured");
     }
 
     const prompt = `Você é um especialista em atendimento comercial da COESA Energia (energia solar por assinatura).
@@ -83,30 +83,29 @@ Gere uma correção no seguinte formato JSON (APENAS o JSON, sem markdown):
   }
 }`;
 
-    // Call Gemini API
+    // Call the exact Gemini model through OpenRouter.
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENROUTER_API_KEY}` },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2000,
-          },
+          model: "google/gemini-2.0-flash",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+          max_tokens: 2000,
         }),
       }
     );
 
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
-      console.error("Gemini API error:", errorText);
-      throw new Error(`Gemini API error: ${geminiResponse.status}`);
+      console.error("OpenRouter API error:", errorText);
+      throw new Error(`OpenRouter API error: ${geminiResponse.status}`);
     }
 
     const geminiData = await geminiResponse.json();
-    const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const content = geminiData.choices?.[0]?.message?.content || "";
     
     console.log("Gemini response:", content);
 

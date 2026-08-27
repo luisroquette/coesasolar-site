@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
 
     // 3.8 Gate de qualidade por LLM (score 0-100, 5 categorias) — roda 100% em memória
     //     porque insertArticle usa a RPC coesa_blog_insert_article, que não aceita
-    //     p_status (sempre insere published). Fail-open: sem DEEPSEEK_API_KEY o gate
+    //     p_status (sempre insere published). Fail-open: sem a chave OpenRouter o gate
     //     é pulado e o pipeline publica normalmente. Reusa coverUrl/sectionImages/infographic
     //     já gerados — não regenera imagens, só reescreve as seções com issue
     //     (regenerateSectionsWithFeedback, nunca o artigo inteiro numa chamada — mesmo motivo

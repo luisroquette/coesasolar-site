@@ -306,8 +306,8 @@ export async function writeSection(
   totalSections: number,
 ): Promise<string> {
   const client = new OpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: 'https://api.deepseek.com/v1',
+    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
     timeout: 90_000,
     maxRetries: 1,
   });
@@ -323,7 +323,7 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
   // pipeline segue publicável (mesmo contrato de antes).
   for (let attempt = 1; attempt <= 2; attempt++) {
     const response = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
+      model: 'deepseek/deepseek-v4-flash',
       messages: [
         { role: 'system', content: SECTION_SYSTEM_PROMPT },
         { role: 'user', content: user },
@@ -637,8 +637,8 @@ export async function generateArticle(
   // de geração — sem isso, uma chamada travada é morta pelo platform timeout em vez de
   // lançar um erro tratável, e o insertRunLog de erro no catch da rota nunca roda.
   const client = new OpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: 'https://api.deepseek.com/v1',
+    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
     timeout: 90_000,
     maxRetries: 1,
   });
@@ -649,7 +649,7 @@ export async function generateArticle(
     // 2026-07-24 (anunciado 2026-04-24). Chamar com o nome antigo devolve erro do
     // provider a cada tentativa, quebrando a geração de artigo silenciosamente.
     const response = await client.chat.completions.create({
-      model: 'deepseek-v4-flash',
+      model: 'deepseek/deepseek-v4-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildUserPrompt(keyword, internalLinks, brief) },
@@ -763,8 +763,8 @@ async function askDeepseek(system: string, user: string, maxTokens?: number): Pr
   // — 90s cortava a conexão no meio de uma resposta de raciocínio longa antes dela terminar
   // (erro "terminated" do Undici), mesmo dentro do maxDuration=300s da rota.
   const client = new OpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: 'https://api.deepseek.com/v1',
+    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
     timeout: maxTokens !== undefined ? 150_000 : 90_000,
     maxRetries: 1,
   });
@@ -775,7 +775,7 @@ async function askDeepseek(system: string, user: string, maxTokens?: number): Pr
   // estrutura (9 seções + 7 FAQs) é grande o bastante pra correr o MESMO risco de
   // truncamento silencioso que motivou max_tokens explícito em writeSection (Task 2).
   const response = await client.chat.completions.create({
-    model: 'deepseek-v4-flash',
+    model: 'deepseek/deepseek-v4-flash',
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },

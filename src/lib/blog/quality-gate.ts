@@ -4,7 +4,7 @@
 // memória porque a RPC coesa_blog_insert_article não aceita p_status (sempre
 // insere como published) — não há como marcar um artigo como "draft" no banco hoje.
 //
-// Fail-open obrigatório: sem DEEPSEEK_API_KEY, resposta sem texto, ou JSON
+// Fail-open obrigatório: sem a chave OpenRouter, resposta sem texto, ou JSON
 // malformado → { skipped: true, score: null }, sem lançar erro. O pipeline
 // sempre segue publicando, mesmo se o gate não puder rodar.
 
@@ -161,9 +161,9 @@ function parseJudgeResult(raw: string): JudgeResult | null {
  * — o pipeline sempre segue publicando.
  */
 export async function runQualityGate(articleContent: string): Promise<QualityGateResult> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.warn('[quality-gate] DEEPSEEK_API_KEY não configurada — gate pulado (fail-open).');
+    console.warn('[quality-gate] COESASOLAR_OPENROUTER_API_KEY não configurada — gate pulado (fail-open).');
     return { skipped: true, score: null, issues: [], categories: null };
   }
 
@@ -171,9 +171,9 @@ export async function runQualityGate(articleContent: string): Promise<QualityGat
     // Timeout explícito: o default do SDK é 10min (bem acima do maxDuration=300s da rota
     // de geração) — sem isso, uma chamada travada não cai no fail-open, ela é morta pelo
     // platform timeout, o catch nunca roda, e o insertRunLog de erro nunca é gravado.
-    const client = new OpenAI({ apiKey, baseURL: 'https://api.deepseek.com/v1', timeout: 60_000, maxRetries: 1 });
+    const client = new OpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1', timeout: 60_000, maxRetries: 1 });
     const response = await client.chat.completions.create({
-      model: 'deepseek-v4-pro',
+      model: 'deepseek/deepseek-v4-pro',
       messages: [
         { role: 'system', content: JUDGE_SYSTEM_PROMPT },
         { role: 'user', content: articleContent },

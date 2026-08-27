@@ -183,7 +183,7 @@ function buildContext(transcript: unknown): string {
 
 // ============ CALL LLM ============
 async function callLLM(userMessage: string, conversationContext: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("COESASOLAR_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
   if (!LOVABLE_API_KEY) {
     console.error(`[${VERSION}] LOVABLE_API_KEY not configured`);
     return "Desculpa, tive um problema técnico aqui. Pode repetir?";
@@ -203,7 +203,7 @@ async function callLLM(userMessage: string, conversationContext: string): Promis
   }
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,

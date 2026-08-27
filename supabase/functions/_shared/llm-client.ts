@@ -30,7 +30,7 @@ const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 // banco está indisponível ou vazia) chama um model id morto.
 const FALLBACK_CONFIG: LLMConfig = {
   defaultModels: ['deepseek-v4-flash'],
-  gatewayUrl: 'https://api.deepseek.com/v1/chat/completions',
+  gatewayUrl: 'https://openrouter.ai/api/v1/chat/completions',
   defaultTemperature: 0.7,
   defaultMaxTokens: 4096,
   defaultTimeoutMs: 30000,
@@ -107,6 +107,16 @@ export function getDefaultModels(): string[] {
 // Legacy export for backward compatibility
 export const DEFAULT_MODELS = FALLBACK_CONFIG.defaultModels;
 
+function openRouterModel(model: string): string {
+  return model.includes('/') ? model : `deepseek/${model}`;
+}
+
+function openRouterKey(): string {
+  const key = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') ?? Deno.env.get('OPENROUTER_API_KEY');
+  if (!key) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
+  return key;
+}
+
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
   content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
@@ -173,14 +183,14 @@ export async function callLLMWithFallback(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      const response = await fetch(config.gatewayUrl, {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${openRouterKey()}`,
         },
         body: JSON.stringify({
-          model,
+          model: openRouterModel(model),
           messages,
           temperature,
           max_tokens,
@@ -420,14 +430,14 @@ export async function callAIWithModelLegacy(
   const timeoutId = setTimeout(() => controller.abort(), config.defaultTimeoutMs);
   
   try {
-    const response = await fetch(config.gatewayUrl, {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${openRouterKey()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
+        model: openRouterModel(model),
         messages,
         max_completion_tokens: maxTokens,
       }),

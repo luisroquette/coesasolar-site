@@ -13,9 +13,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const LOVABLE_API_KEY = (Deno.env.get("COESASOLAR_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY"))!;
 
-const LLM_ENDPOINT = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const LLM_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 // ============================================
 // TYPES
