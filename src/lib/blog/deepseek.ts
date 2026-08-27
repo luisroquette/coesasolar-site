@@ -145,6 +145,7 @@ export interface ArticleStructure {
 export const MIN_SECTIONS = 7;
 export const MAX_SECTIONS = 9;
 export const FAQ_COUNT = 7;
+export const MIN_ARTICLE_WORDS = 4500;
 
 const STRUCTURE_SYSTEM_PROMPT = `Você é um estrategista de conteúdo SEO para ${brand.name} (${brand.siteUrl}),
 ${editorial.businessDescription}. Público: ${editorial.audience}.
@@ -175,7 +176,7 @@ Gere a ESTRUTURA de um artigo (não o texto completo). Retorne SOMENTE JSON vál
 
 REGRAS OBRIGATÓRIAS:
 - Entre ${MIN_SECTIONS} e ${MAX_SECTIONS} seções H2, cada uma sobre um aspecto distinto do tema (sem sobreposição).
-- word_target por seção: 400-700 (soma total mínima 4.500 palavras) — este número é o alvo do REDATOR
+- word_target por seção: 400-700 (soma total mínima ${MIN_ARTICLE_WORDS.toLocaleString('pt-BR')} palavras) — este número é o alvo do REDATOR
   na próxima etapa; content_brief em si fica CURTO (60-90 palavras), é só a instrução, não o texto final.
 - Exatamente ${FAQ_COUNT} perguntas no FAQ, cada resposta CURTA (20-40 palavras) — objetiva, sem enrolação.
 - summary_bullets: 3 a 5 frases CURTAS, cada uma auto-contida (entrega a ideia sozinha, sem depender
@@ -229,6 +230,7 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
     !!s.slug && !!s.meta_desc && !!s.cover_image_prompt &&
     Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
     s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
+    s.sections.reduce((total, sec) => total + sec.word_target, 0) >= MIN_ARTICLE_WORDS &&
     Array.isArray(s.faq) && s.faq.length === FAQ_COUNT &&
     s.faq.every(f => !!f.question && !!f.answer) &&
     Array.isArray(s.summary_bullets) && s.summary_bullets.length >= 3 && s.summary_bullets.length <= 5 &&
