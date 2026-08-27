@@ -455,7 +455,7 @@ export async function transcribeAudio(
   }
 ): Promise<string | null> {
   const config = getMediaConfig();
-  const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+  const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
   const ZAPI_SECURITY_TOKEN = options?.zapiSecurityToken || Deno.env.get('ZAPI_SECURITY_TOKEN');
   const inaudibleMsg = getInaudibleMessage();
   const hallucinationPatterns = getHallucinationPatterns();
@@ -618,7 +618,7 @@ export async function analyzeImage(
 ): Promise<MediaAnalysisResult | null> {
   try {
     const config = getMediaConfig();
-    const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       console.error('[IMAGE] LOVABLE_API_KEY not configured');
@@ -768,7 +768,7 @@ export async function analyzePDF(
 ): Promise<MediaAnalysisResult | null> {
   try {
     const config = getMediaConfig();
-    const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       console.error('[PDF] LOVABLE_API_KEY not configured');

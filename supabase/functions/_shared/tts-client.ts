@@ -475,7 +475,7 @@ export async function generateVoiceAudio(
   console.log(`[TTS] Input text length: ${text.length} chars`);
   
   const elevenLabsApiKey = configInput.elevenLabsApiKey || Deno.env.get('ELEVENLABS_API_KEY');
-  const openaiApiKey = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+  const openaiApiKey = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
   const voiceId = configInput.voiceId || Deno.env.get('SOFIA_VOICE_ID') || config.defaultVoiceId;
   const supabaseUrl = configInput.supabaseUrl || Deno.env.get('SUPABASE_URL');
   const supabaseKey = configInput.supabaseKey || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');

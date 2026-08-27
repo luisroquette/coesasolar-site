@@ -183,7 +183,7 @@ function buildContext(transcript: unknown): string {
 
 // ============ CALL LLM ============
 async function callLLM(userMessage: string, conversationContext: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+  const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
   if (!LOVABLE_API_KEY) {
     console.error(`[${VERSION}] LOVABLE_API_KEY not configured`);
     return "Desculpa, tive um problema técnico aqui. Pode repetir?";

@@ -13,7 +13,7 @@
 import { matchesPatternCategory, type PatternEntry } from './detection-patterns.ts';
 import { getRenderedTemplate, getTemplate, getTemplateCache, type MessageTemplate } from './message-templates.ts';
 
-const LOVABLE_API_KEY = Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY');
+const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES

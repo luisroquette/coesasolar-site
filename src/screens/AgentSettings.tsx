@@ -794,7 +794,7 @@ export default function AgentSettings() {
                           onApiKeyRequest={async (provider) => {
                             // Show toast with instructions for adding the API key
                             const secretName = ['openai-direct', 'deepseek'].includes(provider)
-                              ? 'COESA_PROPOSTAS_OPENROUTER_API_KEY'
+                              ? 'COESASOLAR_OPENROUTER_API_KEY'
                               : `${provider.toUpperCase().replace('-', '_')}_API_KEY`;
                             toast({
                               title: 'Configurar API Key',
