@@ -23,4 +23,21 @@ describe('LLM custom provider routing', () => {
     expect(source).toContain('COESASOLAR_OPENROUTER_API_KEY');
     expect(source).not.toContain("? 'OPENROUTER_API_KEY'");
   });
+
+  it('uses only live OpenRouter replacements for retired Gemini and OpenAI TTS models', () => {
+    const correctionSource = fs.readFileSync(
+      path.join(process.cwd(), 'supabase/functions/generate-error-correction/index.ts'),
+      'utf8',
+    );
+    const ttsSource = fs.readFileSync(
+      path.join(process.cwd(), 'supabase/functions/_shared/tts-client.ts'),
+      'utf8',
+    );
+
+    expect(correctionSource).toContain('google/gemini-2.5-flash');
+    expect(correctionSource).not.toContain('google/gemini-2.0-flash');
+    expect(ttsSource).toContain("openaiModel: 'x-ai/grok-voice-tts-1.0'");
+    expect(ttsSource).toContain("openaiVoice: 'eve'");
+    expect(ttsSource).not.toContain("openaiModel: 'tts-1'");
+  });
 });
