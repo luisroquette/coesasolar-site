@@ -1,4 +1,4 @@
-project_id = "cvcdweqybgfxywcelriq"
+project_id = "sapsikmekwfwcnpyvzed"
 
 [functions.bitrix24-deal-webhook]
 verify_jwt = false
