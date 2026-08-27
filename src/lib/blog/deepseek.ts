@@ -308,7 +308,7 @@ export async function writeSection(
   totalSections: number,
 ): Promise<string> {
   const client = new OpenAI({
-    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: 90_000,
     maxRetries: 1,
@@ -639,7 +639,7 @@ export async function generateArticle(
   // de geração — sem isso, uma chamada travada é morta pelo platform timeout em vez de
   // lançar um erro tratável, e o insertRunLog de erro no catch da rota nunca roda.
   const client = new OpenAI({
-    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: 90_000,
     maxRetries: 1,
@@ -765,7 +765,7 @@ async function askDeepseek(system: string, user: string, maxTokens?: number): Pr
   // — 90s cortava a conexão no meio de uma resposta de raciocínio longa antes dela terminar
   // (erro "terminated" do Undici), mesmo dentro do maxDuration=300s da rota.
   const client = new OpenAI({
-    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: maxTokens !== undefined ? 150_000 : 90_000,
     maxRetries: 1,

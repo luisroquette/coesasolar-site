@@ -26,7 +26,7 @@ async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
 
 async function generateImageB64(prompt: string, size = '1536x1024'): Promise<string | null> {
   if (Date.now() < imageApiBlockedUntil) return null;
-  const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
   // gpt-image-1: sempre retorna b64_json (response_format não é aceito),
   // quality aceita 'low'|'medium'|'high'|'auto', size aceita 1024x1024|1536x1024|1024x1536|auto

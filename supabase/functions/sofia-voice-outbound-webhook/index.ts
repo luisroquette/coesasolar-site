@@ -13,7 +13,7 @@ const corsHeaders = getCorsHeaders(null as unknown as Request, { mode: 'permissi
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') ?? Deno.env.get('OPENROUTER_API_KEY');
+const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
 
 const MODELS = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
 

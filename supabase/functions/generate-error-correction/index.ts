@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const body: CorrectionRequest = await req.json();
     const { client_message, wrong_response, issues, reasoning, funnel_stage } = body;
 
-    const OPENROUTER_API_KEY = Deno.env.get("COESASOLAR_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY');
     if (!OPENROUTER_API_KEY) {
       throw new Error("COESASOLAR_OPENROUTER_API_KEY not configured");
     }

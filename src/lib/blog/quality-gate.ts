@@ -161,7 +161,7 @@ function parseJudgeResult(raw: string): JudgeResult | null {
  * — o pipeline sempre segue publicando.
  */
 export async function runQualityGate(articleContent: string): Promise<QualityGateResult> {
-  const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) {
     console.warn('[quality-gate] COESASOLAR_OPENROUTER_API_KEY não configurada — gate pulado (fail-open).');
     return { skipped: true, score: null, issues: [], categories: null };
