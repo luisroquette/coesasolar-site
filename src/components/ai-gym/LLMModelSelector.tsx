@@ -173,9 +173,9 @@ export const CUSTOM_PROVIDER_TEMPLATES = [
   },
   { 
     id: 'openai-direct', 
-    name: 'OpenAI Direct', 
-    placeholder: 'sk-...', 
-    modelExamples: 'gpt-4.1, gpt-4o, o1-preview, o3-mini',
+    name: 'OpenAI via OpenRouter',
+    placeholder: 'sk-or-v1-...',
+    modelExamples: 'openai/gpt-4.1, openai/gpt-4o, openai/gpt-5, openai/gpt-5.5',
     pricingHint: '$2-$12/1M input • $8-$50/1M output',
   },
   { 
@@ -201,9 +201,9 @@ export const CUSTOM_PROVIDER_TEMPLATES = [
   },
   { 
     id: 'deepseek', 
-    name: 'DeepSeek (Econômico)', 
-    placeholder: 'sk-...', 
-    modelExamples: 'deepseek-chat, deepseek-reasoner',
+    name: 'DeepSeek via OpenRouter',
+    placeholder: 'sk-or-v1-...',
+    modelExamples: 'deepseek/deepseek-v4-flash, deepseek/deepseek-v4-pro',
     pricingHint: '$0.14-$0.55/1M tokens (muito barato!)',
   },
   { 
@@ -331,7 +331,7 @@ export function LLMModelSelector({
         defaultBaseUrl = 'https://api.anthropic.com/v1';
         break;
       case 'openai-direct':
-        defaultBaseUrl = 'https://api.openai.com/v1';
+        defaultBaseUrl = 'https://openrouter.ai/api/v1';
         break;
       case 'groq':
         defaultBaseUrl = 'https://api.groq.com/openai/v1';
@@ -343,7 +343,7 @@ export function LLMModelSelector({
         defaultBaseUrl = 'https://api.mistral.ai/v1';
         break;
       case 'deepseek':
-        defaultBaseUrl = 'https://api.deepseek.com/v1';
+        defaultBaseUrl = 'https://openrouter.ai/api/v1';
         break;
       case 'cohere':
         defaultBaseUrl = 'https://api.cohere.ai/v1';
