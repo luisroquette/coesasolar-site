@@ -4,7 +4,7 @@ import { getStrictCorsHeaders, handleCorsPrelight } from '../_shared/security-he
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const OPENAI_API_KEY = (Deno.env.get('COESASOLAR_OPENROUTER_API_KEY'))!;
+const OPENAI_API_KEY = (Deno.env.get('COESA_PROPOSTAS_OPENROUTER_API_KEY'))!;
 const MICROSOFT_TENANT_ID = Deno.env.get('MICROSOFT_TENANT_ID');
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID');
 const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET');

@@ -20,7 +20,7 @@ describe('LLM custom provider routing', () => {
       'utf8',
     );
 
-    expect(source).toContain('COESASOLAR_OPENROUTER_API_KEY');
+    expect(source).toContain('COESA_PROPOSTAS_OPENROUTER_API_KEY');
     expect(source).not.toContain("? 'OPENROUTER_API_KEY'");
   });
 });
