@@ -52,7 +52,7 @@ const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // Fallback defaults
 const FALLBACK_MEDIA_CONFIG: MediaConfig = {
-  gatewayUrl: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+  gatewayUrl: 'https://openrouter.ai/api/v1/chat/completions',
   transcriptionModel: 'google/gemini-2.5-flash',
   transcriptionFallbackModel: 'openai/gpt-5-mini', // Fallback model for retry
   analysisModel: 'google/gemini-2.5-flash',
@@ -455,7 +455,7 @@ export async function transcribeAudio(
   }
 ): Promise<string | null> {
   const config = getMediaConfig();
-  const LOVABLE_API_KEY = options?.lovableApiKey || Deno.env.get('LOVABLE_API_KEY');
+  const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') || Deno.env.get('OPENROUTER_API_KEY') || options?.lovableApiKey;
   const ZAPI_SECURITY_TOKEN = options?.zapiSecurityToken || Deno.env.get('ZAPI_SECURITY_TOKEN');
   const inaudibleMsg = getInaudibleMessage();
   const hallucinationPatterns = getHallucinationPatterns();
@@ -618,7 +618,7 @@ export async function analyzeImage(
 ): Promise<MediaAnalysisResult | null> {
   try {
     const config = getMediaConfig();
-    const LOVABLE_API_KEY = options?.lovableApiKey || Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') || Deno.env.get('OPENROUTER_API_KEY') || options?.lovableApiKey;
 
     if (!LOVABLE_API_KEY) {
       console.error('[IMAGE] LOVABLE_API_KEY not configured');
@@ -768,7 +768,7 @@ export async function analyzePDF(
 ): Promise<MediaAnalysisResult | null> {
   try {
     const config = getMediaConfig();
-    const LOVABLE_API_KEY = options?.lovableApiKey || Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') || Deno.env.get('OPENROUTER_API_KEY') || options?.lovableApiKey;
 
     if (!LOVABLE_API_KEY) {
       console.error('[PDF] LOVABLE_API_KEY not configured');

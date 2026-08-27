@@ -8,11 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const generateMock = vi.fn();
 const uploadMock = vi.fn();
 
-vi.mock('openai', () => ({
-  default: class OpenAI {
-    images = { generate: generateMock };
-  },
-}));
+vi.stubGlobal('fetch', generateMock);
 
 vi.mock('sharp', () => ({
   default: () => ({
@@ -35,6 +31,7 @@ vi.mock('@/lib/autoblog-profile', () => ({
 const { generateAndUploadBodyImages, generateAndUploadCover } = await import('./image-gen');
 
 beforeEach(() => {
+  vi.stubEnv('COESASOLAR_OPENROUTER_API_KEY', 'test-key');
   generateMock.mockReset();
   uploadMock.mockReset();
 });
@@ -42,9 +39,9 @@ beforeEach(() => {
 describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva posição (null, nunca pula)', () => {
   it('imagem do meio falha (sem b64): array mantém o tamanho de prompts, null na posição certa', async () => {
     generateMock
-      .mockResolvedValueOnce({ data: [{ b64_json: 'aaa' }] }) // seção 0: ok
-      .mockResolvedValueOnce({ data: [{}] }) // seção 1: sem b64_json — falha
-      .mockResolvedValueOnce({ data: [{ b64_json: 'ccc' }] }); // seção 2: ok
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'aaa' }] }) }) // seção 0: ok
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{}] }) }) // seção 1: sem b64_json — falha
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'ccc' }] }) }); // seção 2: ok
     uploadMock
       .mockResolvedValueOnce('https://x/s0.webp')
       .mockResolvedValueOnce('https://x/s2.webp');
@@ -59,8 +56,8 @@ describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva 
 
   it('upload falha (throw): posição vira null, não interrompe as seguintes', async () => {
     generateMock
-      .mockResolvedValueOnce({ data: [{ b64_json: 'aaa' }] })
-      .mockResolvedValueOnce({ data: [{ b64_json: 'bbb' }] });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'aaa' }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'bbb' }] }) });
     uploadMock
       .mockRejectedValueOnce(new Error('storage indisponível'))
       .mockResolvedValueOnce('https://x/s1.webp');
@@ -72,7 +69,7 @@ describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva 
   });
 
   it('prompt vazio: posição vira null sem chamar a API paga', async () => {
-    generateMock.mockResolvedValueOnce({ data: [{ b64_json: 'aaa' }] });
+    generateMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'aaa' }] }) });
     uploadMock.mockResolvedValueOnce('https://x/s1.webp');
 
     const result = await generateAndUploadBodyImages(['', 'prompt 1'], 'slug', 'kw');
@@ -83,8 +80,8 @@ describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva 
 
   it('caso positivo: todas as N seções com imagem — array de {url,alt} sem nenhum null', async () => {
     generateMock
-      .mockResolvedValueOnce({ data: [{ b64_json: 'aaa' }] })
-      .mockResolvedValueOnce({ data: [{ b64_json: 'bbb' }] });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'aaa' }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'bbb' }] }) });
     uploadMock
       .mockResolvedValueOnce('https://x/s0.webp')
       .mockResolvedValueOnce('https://x/s1.webp');
@@ -100,7 +97,7 @@ describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva 
 
 describe('REGRESSÃO 26/08/2026: falha de crédito nunca publica capa nula', () => {
   it('429 usa fallback próprio e abre circuito para não repetir chamadas pagas no corpo', async () => {
-    generateMock.mockRejectedValueOnce(Object.assign(new Error('no credits'), { status: 429 }));
+    generateMock.mockResolvedValueOnce({ ok: false, status: 429 });
 
     const cover = await generateAndUploadCover('painéis solares', 'energia-compartilhada');
     const body = await generateAndUploadBodyImages(['a', 'b'], 'slug', 'kw');

@@ -361,14 +361,14 @@ async function generateOpenAIAudio(
   console.log(`[TTS] Trying OpenAI TTS for ${text.length} chars`);
   
   try {
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    const response = await fetch('https://openrouter.ai/api/v1/audio/speech', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: config.openaiModel,
+        model: config.openaiModel.includes('/') ? config.openaiModel : `openai/${config.openaiModel}`,
         input: text,
         voice: config.openaiVoice,
         response_format: 'mp3',
@@ -475,13 +475,13 @@ export async function generateVoiceAudio(
   console.log(`[TTS] Input text length: ${text.length} chars`);
   
   const elevenLabsApiKey = configInput.elevenLabsApiKey || Deno.env.get('ELEVENLABS_API_KEY');
-  const openaiApiKey = configInput.openaiApiKey || Deno.env.get('OPENAI_API_KEY');
+  const openaiApiKey = configInput.openaiApiKey || Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') || Deno.env.get('OPENROUTER_API_KEY');
   const voiceId = configInput.voiceId || Deno.env.get('SOFIA_VOICE_ID') || config.defaultVoiceId;
   const supabaseUrl = configInput.supabaseUrl || Deno.env.get('SUPABASE_URL');
   const supabaseKey = configInput.supabaseKey || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   
   console.log(`[TTS] ELEVENLABS_API_KEY configured: ${!!elevenLabsApiKey}`);
-  console.log(`[TTS] OPENAI_API_KEY configured: ${!!openaiApiKey}`);
+  console.log(`[TTS] OpenRouter key configured: ${!!openaiApiKey}`);
   console.log(`[TTS] Voice ID: ${voiceId}`);
   
   if (!elevenLabsApiKey && !openaiApiKey) {

@@ -1,11 +1,8 @@
 // src/lib/blog/image-gen.ts
-import OpenAI from 'openai';
-import type { ImagesResponse } from 'openai/resources/images';
 import sharp from 'sharp';
 import { uploadImageToStorage } from './supabase-blog';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
 
-const CLIENT = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 let imageApiBlockedUntil = 0;
 
 export function fallbackCoverUrl(slug: string): string {
@@ -27,17 +24,19 @@ async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-async function generateImageB64(prompt: string): Promise<string | null> {
+async function generateImageB64(prompt: string, size = '1536x1024'): Promise<string | null> {
   if (Date.now() < imageApiBlockedUntil) return null;
+  const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
   // gpt-image-1: sempre retorna b64_json (response_format não é aceito),
   // quality aceita 'low'|'medium'|'high'|'auto', size aceita 1024x1024|1536x1024|1024x1536|auto
-  const response = (await CLIENT().images.generate({
-    model: 'gpt-image-1',
-    prompt,
-    size: '1536x1024',
-    quality: 'medium',
-  } as Parameters<OpenAI['images']['generate']>[0])) as ImagesResponse;
-  return response.data?.[0]?.b64_json ?? null;
+  const response = await fetch('https://openrouter.ai/api/v1/images', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'openai/gpt-image-1', prompt, size, quality: 'medium' }),
+  });
+  if (!response.ok) throw Object.assign(new Error(`OpenRouter image error ${response.status}`), { status: response.status });
+  return ((await response.json()) as { data?: Array<{ b64_json?: string }> }).data?.[0]?.b64_json ?? null;
 }
 
 export async function generateAndUploadCover(
@@ -70,13 +69,10 @@ export async function generateAndUploadInfographic(
   if (!prompt?.trim()) return null; // prompt vazio = chamada paga desperdiçada
 
   try {
-    const response = (await CLIENT().images.generate({
-      model: 'gpt-image-1',
-      prompt: `${prompt}, clean infographic style, bold shapes and icons, flat design, NO text, no words, no letters`,
-      size: '1024x1024',
-      quality: 'medium',
-    } as Parameters<OpenAI['images']['generate']>[0])) as ImagesResponse;
-    const b64 = response.data?.[0]?.b64_json;
+    const b64 = await generateImageB64(
+      `${prompt}, clean infographic style, bold shapes and icons, flat design, NO text, no words, no letters`,
+      '1024x1024',
+    );
     if (!b64) return null;
 
     const webp = await sharp(Buffer.from(b64, 'base64'))

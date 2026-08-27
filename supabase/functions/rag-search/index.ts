@@ -18,7 +18,7 @@ import { validateRAGSearch, parseAndValidate } from '../_shared/zod-schemas.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!
+const OPENAI_API_KEY = (Deno.env.get('COESASOLAR_OPENROUTER_API_KEY') ?? Deno.env.get('OPENROUTER_API_KEY'))!
 
 interface SearchResult {
   id: string;
@@ -165,14 +165,14 @@ async function getOrCreateEmbedding(
   // 3. Generate new embedding from OpenAI
   console.log('[rag-search] 🔄 Generating new embedding via OpenAI');
   
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
+  const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENAI_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'text-embedding-3-small',
+      model: 'openai/text-embedding-3-small',
       input: text,
     }),
   });

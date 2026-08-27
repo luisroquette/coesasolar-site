@@ -462,7 +462,7 @@ function getContextAnalysisPrompt(): string {
 export async function analyzeDistribuidoraContext(
   message: string,
   apiKey: string,
-  apiUrl: string = 'https://ai.gateway.lovable.dev/v1/chat/completions'
+  apiUrl: string = 'https://openrouter.ai/api/v1/chat/completions'
 ): Promise<DistribuidoraContextAnalysis | null> {
   // Quick check: if message doesn't contain any potential distributor mention, skip AI call
   const potentialMentions = [

@@ -25,7 +25,7 @@ const VALID_JUDGE_JSON = {
 
 beforeEach(() => {
   createMock.mockReset();
-  vi.stubEnv('DEEPSEEK_API_KEY', 'test-key');
+  vi.stubEnv('COESASOLAR_OPENROUTER_API_KEY', 'test-key');
 });
 
 afterEach(() => {
@@ -70,8 +70,8 @@ describe('REGRESSÃO: quality-gate — runQualityGate', () => {
     expect(result.issues[0].severity).toBe('P0');
   });
 
-  it('fail-open sem DEEPSEEK_API_KEY: retorna skipped=true sem chamar o client', async () => {
-    vi.stubEnv('DEEPSEEK_API_KEY', '');
+  it('fail-open sem COESASOLAR_OPENROUTER_API_KEY: retorna skipped=true sem chamar o client', async () => {
+    vi.stubEnv('COESASOLAR_OPENROUTER_API_KEY', '');
 
     const result = await runQualityGate('# Artigo qualquer');
 
@@ -285,7 +285,7 @@ describe('REGRESSÃO: quality-gate — runQualityGateLoop', () => {
   });
 
   it('fail-open dentro do loop: se o gate for pulado, não regenera e publica direto', async () => {
-    vi.stubEnv('DEEPSEEK_API_KEY', '');
+    vi.stubEnv('COESASOLAR_OPENROUTER_API_KEY', '');
     const regenerate = vi.fn();
 
     const result = await runQualityGateLoop('artigo v1', content => content, regenerate);
