@@ -37,6 +37,21 @@ beforeEach(() => {
 });
 
 describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva posição (null, nunca pula)', () => {
+  it('usa Seedream 4.5 em 2K e 16:9 via OpenRouter', async () => {
+    generateMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'aaa' }] }) });
+    uploadMock.mockResolvedValueOnce('https://x/cover.webp');
+
+    await generateAndUploadCover('painéis solares', 'energia-solar');
+
+    const request = generateMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      model: 'bytedance-seed/seedream-4.5',
+      resolution: '2K',
+      aspect_ratio: '16:9',
+      n: 1,
+    });
+  });
+
   it('imagem do meio falha (sem b64): array mantém o tamanho de prompts, null na posição certa', async () => {
     generateMock
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ b64_json: 'aaa' }] }) }) // seção 0: ok

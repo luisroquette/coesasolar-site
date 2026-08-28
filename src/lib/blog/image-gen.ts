@@ -16,7 +16,7 @@ function blockImageApiTemporarily(err: unknown): void {
   }
 }
 
-/** PNG 1536x1024 do gpt-image-1 → 1280x853 webp q80 (~150-250KB; Neil: "5MB → 200KB"). */
+/** Imagem 2K do Seedream 4.5 → 1280x853 webp q80 (~150-250KB; Neil: "5MB → 200KB"). */
 async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
     .resize(1280, 853, { fit: 'cover' })
@@ -28,12 +28,16 @@ async function generateImageB64(prompt: string, size = '1536x1024'): Promise<str
   if (Date.now() < imageApiBlockedUntil) return null;
   const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
-  // gpt-image-1: sempre retorna b64_json (response_format não é aceito),
-  // quality aceita 'low'|'medium'|'high'|'auto', size aceita 1024x1024|1536x1024|1024x1536|auto
   const response = await fetch('https://openrouter.ai/api/v1/images', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: 'openai/gpt-image-1', prompt, size, quality: 'medium' }),
+    body: JSON.stringify({
+      model: 'bytedance-seed/seedream-4.5',
+      prompt,
+      resolution: '2K',
+      aspect_ratio: size === '1024x1024' ? '1:1' : '16:9',
+      n: 1,
+    }),
   });
   if (!response.ok) throw Object.assign(new Error(`OpenRouter image error ${response.status}`), { status: response.status });
   return ((await response.json()) as { data?: Array<{ b64_json?: string }> }).data?.[0]?.b64_json ?? null;

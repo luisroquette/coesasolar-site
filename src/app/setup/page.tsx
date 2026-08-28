@@ -145,7 +145,7 @@ export default async function SetupPage() {
           title="Conteúdo visual"
           items={[
             {
-              name: 'Capa e imagens do corpo (gpt-image-1)',
+              name: 'Capa e imagens do corpo (Seedream 4.5 2K)',
               ready: images && AUTOBLOG_PROFILE.integrations.imageGenerationEnabled,
               action: images
                 ? 'Ligue imageGenerationEnabled no perfil e crie o bucket público blog-covers no Supabase.'
