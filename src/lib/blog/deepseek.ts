@@ -325,7 +325,7 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
   // pipeline segue publicável (mesmo contrato de antes).
   for (let attempt = 1; attempt <= 2; attempt++) {
     const response = await client.chat.completions.create({
-      model: 'deepseek/deepseek-v4-flash',
+      model: 'deepseek/deepseek-v4-flash-0731',
       messages: [
         { role: 'system', content: SECTION_SYSTEM_PROMPT },
         { role: 'user', content: user },
@@ -651,7 +651,7 @@ export async function generateArticle(
     // 2026-07-24 (anunciado 2026-04-24). Chamar com o nome antigo devolve erro do
     // provider a cada tentativa, quebrando a geração de artigo silenciosamente.
     const response = await client.chat.completions.create({
-      model: 'deepseek/deepseek-v4-flash',
+      model: 'deepseek/deepseek-v4-flash-0731',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildUserPrompt(keyword, internalLinks, brief) },
@@ -777,7 +777,7 @@ async function askDeepseek(system: string, user: string, maxTokens?: number): Pr
   // estrutura (9 seções + 7 FAQs) é grande o bastante pra correr o MESMO risco de
   // truncamento silencioso que motivou max_tokens explícito em writeSection (Task 2).
   const response = await client.chat.completions.create({
-    model: 'deepseek/deepseek-v4-flash',
+    model: 'deepseek/deepseek-v4-flash-0731',
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },

@@ -29,7 +29,7 @@ describe('GET /api/ai/health', () => {
     }));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, model: 'deepseek/deepseek-v4-flash' });
+    expect(await response.json()).toEqual({ ok: true, model: 'deepseek/deepseek-v4-flash-0731' });
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer dedicated-key' });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({ max_tokens: 1 });

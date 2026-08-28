@@ -203,7 +203,7 @@ export const CUSTOM_PROVIDER_TEMPLATES = [
     id: 'deepseek', 
     name: 'DeepSeek via OpenRouter',
     placeholder: 'sk-or-v1-...',
-    modelExamples: 'deepseek/deepseek-v4-flash, deepseek/deepseek-v4-pro',
+    modelExamples: 'deepseek/deepseek-v4-flash-0731, deepseek/deepseek-v4-pro',
     pricingHint: '$0.14-$0.55/1M tokens (muito barato!)',
   },
   { 
