@@ -2208,7 +2208,7 @@ export default function Configuracoes() {
                 <div className="p-4 bg-muted/30 rounded-lg space-y-2">
                   <p className="font-medium text-sm">URL para Webhook de Saída (Bitrix24 → COESA):</p>
                   <code className="block p-2 bg-background rounded text-xs font-mono break-all">
-                    https://cvcdweqybgfxywcelriq.supabase.co/functions/v1/bitrix24-webhook
+                    https://sapsikmekwfwcnpyvzed.supabase.co/functions/v1/bitrix24-webhook
                   </code>
                   <p className="text-xs text-muted-foreground">
                     Configure esta URL no Bitrix24 para receber atualizações de leads (eventos: ONCRMLEADADD, ONCRMLEADUPDATE)

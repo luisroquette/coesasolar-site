@@ -25,6 +25,10 @@ describe('LLM custom provider routing', () => {
   });
 
   it('uses only live OpenRouter replacements for retired Gemini and OpenAI TTS models', () => {
+    const selectorSource = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/ai-gym/LLMModelSelector.tsx'),
+      'utf8',
+    );
     const correctionSource = fs.readFileSync(
       path.join(process.cwd(), 'supabase/functions/generate-error-correction/index.ts'),
       'utf8',
@@ -34,10 +38,24 @@ describe('LLM custom provider routing', () => {
       'utf8',
     );
 
+    expect(selectorSource).toContain('google/gemini-3.1-pro-preview');
+    expect(selectorSource).not.toContain("id: 'google/gemini-3-pro-preview'");
     expect(correctionSource).toContain('google/gemini-2.5-flash');
     expect(correctionSource).not.toContain('google/gemini-2.0-flash');
     expect(ttsSource).toContain("openaiModel: 'x-ai/grok-voice-tts-1.0'");
     expect(ttsSource).toContain("openaiVoice: 'eve'");
     expect(ttsSource).not.toContain("openaiModel: 'tts-1'");
+  });
+
+  it('keeps executable Supabase URLs on the active CoesaSolar project', () => {
+    const sources = [
+      'src/components/ai-gym/ZApiIntegrationDocs.tsx',
+      'src/screens/Configuracoes.tsx',
+    ].map((file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8'));
+
+    for (const source of sources) {
+      expect(source).toContain('sapsikmekwfwcnpyvzed.supabase.co');
+      expect(source).not.toContain('cvcdweqybgfxywcelriq.supabase.co');
+    }
   });
 });

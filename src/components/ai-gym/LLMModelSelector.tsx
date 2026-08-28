@@ -49,8 +49,8 @@ export const LOVABLE_NATIVE_MODELS: LLMModel[] = [
     pricingOutput: '$0.40',
   },
   {
-    id: 'google/gemini-3-pro-preview',
-    name: 'Gemini 3 Pro Preview',
+    id: 'google/gemini-3.1-pro-preview',
+    name: 'Gemini 3.1 Pro Preview',
     description: 'Top da linha, raciocínio avançado',
     speed: 'powerful',
     provider: 'google',
