@@ -46,6 +46,7 @@ describe('REGRESSÃO checklist 25/08/2026: generateAndUploadBodyImages preserva 
     const request = generateMock.mock.calls[0]?.[1] as RequestInit;
     expect(JSON.parse(String(request.body))).toMatchObject({
       model: 'bytedance-seed/seedream-4.5',
+      user: 'coesasolar/blog/cover',
       resolution: '2K',
       aspect_ratio: '16:9',
       n: 1,

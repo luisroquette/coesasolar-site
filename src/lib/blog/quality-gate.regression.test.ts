@@ -43,6 +43,7 @@ describe('REGRESSÃO: quality-gate — runQualityGate', () => {
     expect(result.categories).toEqual(VALID_JUDGE_JSON.categories);
     expect(result.issues).toEqual([]);
     expect(createMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ user: 'coesasolar/blog/quality-gate' }));
   });
 
   it('parseia issues com severidade quando o score é baixo', async () => {
