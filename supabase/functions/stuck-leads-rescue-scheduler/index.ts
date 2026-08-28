@@ -611,7 +611,7 @@ Deno.serve(async (req) => {
     
     const { data: expiredPendingTasks, error: pendingError } = await supabase
       .from('chatbot_conversas')
-      .select('id, cliente_telefone, cliente_nome, pending_task, pending_task_retries, dados_coletados, agent_id')
+      .select('id, cliente_telefone, cliente_nome, pending_task, pending_task_retries, dados_coletados, agent_id, created_at')
       .not('pending_task', 'is', null)
       .lt('pending_task_created_at', pendingTaskThreshold)
       .is('ended_at', null)

@@ -269,7 +269,7 @@ serve(async (req) => {
     } = body;
     
     // Extract funnel_stage from body (not in zod schema yet, so read raw)
-    const funnelStage = (body as Record<string, unknown>).funnel_stage as string | undefined;
+    const funnelStage = (body as unknown as Record<string, unknown>).funnel_stage as string | undefined;
 
     // Additional validation for required agentId
     if (!agentId) {

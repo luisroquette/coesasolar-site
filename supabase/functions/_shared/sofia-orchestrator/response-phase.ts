@@ -393,7 +393,7 @@ export async function executeResponsePhase(
     // Release lock and return silently
     await releaseLockSafely(supabase, phone);
     if (bufferId) {
-      await clearBuffer(supabase, bufferId);
+      await clearBuffer(supabase, phone, agentId);
     }
     
     return {
