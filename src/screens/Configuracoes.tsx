@@ -1858,7 +1858,7 @@ export default function Configuracoes() {
                       id="publicAppUrl"
                       value={publicAppUrl}
                       onChange={(e) => setPublicAppUrl(e.target.value)}
-                      placeholder="https://seusite.lovable.app"
+                      placeholder="https://coesasolar.com.br"
                       className="font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground mt-1">

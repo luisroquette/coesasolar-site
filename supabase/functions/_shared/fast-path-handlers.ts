@@ -2232,7 +2232,7 @@ async function getContractUrl(supabase: SupabaseClient, leadId: string | null): 
       .single();
     
     if (proposta?.contrato_url) return proposta.contrato_url;
-    if (proposta?.public_id) return `https://coesa-propose-craft.lovable.app/proposta/${proposta.public_id}`;
+    if (proposta?.public_id) return `https://coesasolar.com.br/proposta/${proposta.public_id}`;
     
     return null;
   } catch {

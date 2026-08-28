@@ -64,7 +64,7 @@ interface URLConfig {
 }
 
 async function fetchURLConfig(supabase: SupabaseClient): Promise<URLConfig> {
-  const defaultUrl = 'https://coesa-propose-craft.lovable.app';
+  const defaultUrl = 'https://coesasolar.com.br';
   
   try {
     const { data: configs } = await supabase

@@ -108,7 +108,7 @@ export function ProposalViewsTracker() {
     }
   };
 
-  const publicUrl = 'https://coesa-propose-craft.lovable.app/proposta';
+  const publicUrl = 'https://coesasolar.com.br/proposta';
 
   if (isLoading) {
     return (

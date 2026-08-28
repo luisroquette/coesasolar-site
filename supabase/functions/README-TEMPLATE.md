@@ -71,7 +71,7 @@
 
 ### cURL
 ```bash
-curl -X POST 'https://cvcdweqybgfxywcelriq.supabase.co/functions/v1/[function-name]' \
+curl -X POST 'https://<project-ref>.supabase.co/functions/v1/[function-name]' \
   -H 'Authorization: Bearer [TOKEN]' \
   -H 'Content-Type: application/json' \
   -d '{"campo1": "valor"}'

@@ -830,8 +830,6 @@ const VALID_PROPOSAL_DOMAINS = [
   'coesasolar.com.br',
   'coesaenergia.com.br',
   'coesa.com.br',
-  'lovable.app',
-  'lovableproject.com',
 ];
 
 // UUID pattern for proposal IDs
@@ -1041,7 +1039,7 @@ export async function orchestrateGuardrailsFlow(
 
   // Public URL config cache (module-level)
   type PublicUrlConfig = { publicAppUrl: string; cacheBust?: string };
-  const DEFAULT_PUBLIC_URL = 'https://coesa-propose-craft.lovable.app';
+  const DEFAULT_PUBLIC_URL = 'https://coesasolar.com.br';
   const PUBLIC_URL_TTL_MS = 5 * 60 * 1000;
   // deno-lint-ignore no-explicit-any
   const globalAny: any = globalThis as any;

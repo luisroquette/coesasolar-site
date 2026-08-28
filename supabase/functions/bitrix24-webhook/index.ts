@@ -1905,10 +1905,8 @@ Deno.serve(async (req) => {
         publicUrl = `${originUrl.origin}/${routePath}/${proposalId}?download=true${vParam}`;
         console.log(`Using request origin for URL: ${originUrl.origin}`);
       } else {
-        // Last resort: construct from project ID
-        const projectId = supabaseUrl.match(/https:\/\/([^.]+)\./)?.[1] || 'app';
-        publicUrl = `https://${projectId}.lovable.app/${routePath}/${proposalId}?download=true${vParam}`;
-        console.log(`Using fallback URL construction with project ID: ${projectId}`);
+        publicUrl = `https://coesasolar.com.br/${routePath}/${proposalId}?download=true${vParam}`;
+        console.log('Using official CoesaSolar URL fallback');
       }
     }
 

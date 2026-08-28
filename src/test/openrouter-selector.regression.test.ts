@@ -58,4 +58,26 @@ describe('LLM custom provider routing', () => {
       expect(source).not.toContain('cvcdweqybgfxywcelriq.supabase.co');
     }
   });
+
+  it('keeps executable public URLs on the active CoesaSolar domain', () => {
+    const sources = [
+      'src/components/admin/ProposalViewsTracker.tsx',
+      'src/hooks/useConfiguracoes.ts',
+      'src/screens/Configuracoes.tsx',
+      'supabase/functions/bitrix24-webhook/index.ts',
+      'supabase/functions/stuck-leads-rescue-scheduler/index.ts',
+      'supabase/functions/_shared/fast-path-handlers.ts',
+      'supabase/functions/_shared/llm-guardrails.ts',
+      'supabase/functions/_shared/proposal-link-sender.ts',
+      'supabase/functions/_shared/proposal-resend.ts',
+      'supabase/functions/_shared/security-helpers.ts',
+      'supabase/functions/_shared/technical-issues.ts',
+    ].map((file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8'));
+
+    for (const source of sources) {
+      expect(source).toContain('coesasolar.com.br');
+      expect(source).not.toContain('.lovable.app');
+      expect(source).not.toContain('lovableproject.com');
+    }
+  });
 });
