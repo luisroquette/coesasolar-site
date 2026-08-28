@@ -263,6 +263,7 @@ export async function generateArticleStructure(
     const text = await askDeepseek(
       STRUCTURE_SYSTEM_PROMPT,
       buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
+      'coesasolar/blog/article-structure',
       STRUCTURE_MAX_TOKENS,
     );
     console.warn(`[deepseek] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
@@ -325,6 +326,7 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
   // pipeline segue publicável (mesmo contrato de antes).
   for (let attempt = 1; attempt <= 2; attempt++) {
     const response = await client.chat.completions.create({
+      user: 'coesasolar/blog/write-section',
       model: 'deepseek/deepseek-v4-flash-0731',
       messages: [
         { role: 'system', content: SECTION_SYSTEM_PROMPT },
@@ -651,6 +653,7 @@ export async function generateArticle(
     // 2026-07-24 (anunciado 2026-04-24). Chamar com o nome antigo devolve erro do
     // provider a cada tentativa, quebrando a geração de artigo silenciosamente.
     const response = await client.chat.completions.create({
+      user: 'coesasolar/blog/generate-article',
       model: 'deepseek/deepseek-v4-flash-0731',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -708,7 +711,7 @@ Sem markdown ao redor, sem texto antes ou depois.`;
     // o contrato documentado acima ("o pipeline nunca quebra por causa do gate").
     let text: string;
     try {
-      text = await askDeepseek(SYSTEM_PROMPT, user);
+      text = await askDeepseek(SYSTEM_PROMPT, user, 'coesasolar/blog/regenerate-feedback');
     } catch (err) {
       // return direto (não break): a mensagem genérica abaixo do loop diz "falhou nas 2
       // tentativas", o que seria falso quando o erro de rede interrompe na 1ª tentativa —
@@ -758,7 +761,7 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
   );
 }
 
-async function askDeepseek(system: string, user: string, maxTokens?: number): Promise<string> {
+async function askDeepseek(system: string, user: string, route: string, maxTokens?: number): Promise<string> {
   // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
   // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
   // 150s (não 90s) quando maxTokens é passado (generateArticleStructure): achado 25/08/2026
@@ -777,6 +780,7 @@ async function askDeepseek(system: string, user: string, maxTokens?: number): Pr
   // estrutura (9 seções + 7 FAQs) é grande o bastante pra correr o MESMO risco de
   // truncamento silencioso que motivou max_tokens explícito em writeSection (Task 2).
   const response = await client.chat.completions.create({
+    user: route,
     model: 'deepseek/deepseek-v4-flash-0731',
     messages: [
       { role: 'system', content: system },
@@ -816,7 +820,7 @@ Use H2s em forma de pergunta quando a keyword for uma pergunta (formato FAQ).
 Retorne somente o JSON.`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const text = await askDeepseek(OUTLINE_SYSTEM, user);
+    const text = await askDeepseek(OUTLINE_SYSTEM, user, 'coesasolar/blog/article-outline');
     const outline = parseOutline(text);
     if (outline && isValidOutline(outline, keyword)) return outline;
     if (attempt === 2) break;
@@ -849,7 +853,7 @@ ${outlineText}
 (regra do system prompt — o outline não lista esse H2, mas ele é obrigatório).`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const text = await askDeepseek(SYSTEM_PROMPT, user);
+    const text = await askDeepseek(SYSTEM_PROMPT, user, 'coesasolar/blog/article-from-outline');
     const parsed = parseResponse(text);
     if (parsed) return parsed;
     if (attempt === 2) break;

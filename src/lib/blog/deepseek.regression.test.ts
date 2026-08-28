@@ -90,6 +90,7 @@ describe('REGRESSÃO: deepseek — regenerateWithFeedback nunca propaga erro (fa
 
     expect(result).toEqual(revised);
     expect(createMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ user: 'coesasolar/blog/regenerate-feedback' }));
   });
 
   it('JSON inválido na 1ª tentativa, válido na 2ª: retenta e retorna o revisado', async () => {

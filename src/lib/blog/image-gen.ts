@@ -24,7 +24,7 @@ async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-async function generateImageB64(prompt: string, size = '1536x1024'): Promise<string | null> {
+async function generateImageB64(prompt: string, size = '1536x1024', route = 'coesasolar/blog/image'): Promise<string | null> {
   if (Date.now() < imageApiBlockedUntil) return null;
   const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
@@ -32,6 +32,7 @@ async function generateImageB64(prompt: string, size = '1536x1024'): Promise<str
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
+      user: route,
       model: 'bytedance-seed/seedream-4.5',
       prompt,
       resolution: '2K',
@@ -51,7 +52,7 @@ export async function generateAndUploadCover(
   if (!prompt?.trim()) return fallbackCoverUrl(slug); // sem chamada paga e sem capa nula
 
   try {
-    const b64 = await generateImageB64(prompt);
+    const b64 = await generateImageB64(prompt, '1536x1024', 'coesasolar/blog/cover');
     if (!b64) return fallbackCoverUrl(slug);
 
     const webp = await optimizeToWebp(Buffer.from(b64, 'base64'));
@@ -76,6 +77,7 @@ export async function generateAndUploadInfographic(
     const b64 = await generateImageB64(
       `${prompt}, clean infographic style, bold shapes and icons, flat design, NO text, no words, no letters`,
       '1024x1024',
+      'coesasolar/blog/infographic',
     );
     if (!b64) return null;
 
@@ -98,7 +100,7 @@ async function generateAndUploadOne(
 ): Promise<{ url: string; alt: string } | null> {
   if (!prompt?.trim()) return null; // prompt vazio = chamada paga desperdiçada
   try {
-    const b64 = await generateImageB64(prompt);
+    const b64 = await generateImageB64(prompt, '1536x1024', 'coesasolar/blog/body-image');
     if (!b64) return null;
     const webp = await optimizeToWebp(Buffer.from(b64, 'base64'));
     const url = await uploadImageToStorage(`${slug}-body-${index + 1}.webp`, webp, 'image/webp');
