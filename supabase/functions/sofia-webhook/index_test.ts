@@ -25,7 +25,7 @@ Deno.test("sofia-webhook: OPTIONS returns CORS headers", async () => {
   const response = await fetch(FUNCTION_URL, {
     method: "OPTIONS",
     headers: {
-      "Origin": "https://test.lovable.app",
+      "Origin": "https://coesasolar.com.br",
     },
   });
   

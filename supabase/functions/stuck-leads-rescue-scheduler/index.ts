@@ -1018,7 +1018,7 @@ Deno.serve(async (req) => {
           .from('configuracoes_sistema')
           .select('chave, valor')
           .in('chave', ['public_app_url', 'public_cache_bust']);
-        const publicAppUrl = urlConfig?.find((c: any) => c.chave === 'public_app_url')?.valor || 'https://coesa-propose-craft.lovable.app';
+        const publicAppUrl = urlConfig?.find((c: any) => c.chave === 'public_app_url')?.valor || 'https://coesasolar.com.br';
         const cacheBust = urlConfig?.find((c: any) => c.chave === 'public_cache_bust')?.valor;
         const baseUrl = publicAppUrl.replace(/\/$/, '');
         proposalUrl = `${baseUrl}/proposta-inicial/${conversa.proposta_id}${cacheBust ? `?v=${cacheBust}` : ''}`;

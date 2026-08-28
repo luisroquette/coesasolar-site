@@ -25,13 +25,6 @@ const ALLOWED_ORIGINS = [
   'https://www.coesaenergia.com.br',
   'https://coesasolar.com.br',
   'https://www.coesasolar.com.br',
-  'https://coesa-propose-craft.lovable.app',
-  'https://id-preview--ff2f9802-9605-4d7d-9ad9-b405b9717438.lovable.app',
-  // Lovable preview runtime (random subdomains)
-  // NOTE: We intentionally allow any subdomain to support the editor/preview environment.
-  // This is still restricted to Lovable-owned domains.
-  // Example: https://<id>.lovableproject.com
-  // (Origin matching uses suffix check in isAllowedOrigin())
   // Development
   'http://localhost:3000',
   'http://localhost:5173',
@@ -43,16 +36,7 @@ function isAllowedOrigin(origin: string): boolean {
 
   if (ALLOWED_ORIGINS.includes(origin)) return true;
 
-  // Allow Lovable preview origins with dynamic subdomains
-  // e.g. https://ff2f9802-... .lovableproject.com
-  try {
-    const { protocol, hostname } = new URL(origin);
-    if (protocol !== 'https:') return false;
-
-    return hostname === 'lovableproject.com' || hostname.endsWith('.lovableproject.com');
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 /**

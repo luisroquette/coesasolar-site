@@ -413,7 +413,7 @@ export async function resolveTechnicalIssue(
             .eq('chave', 'public_proposal_base_url')
             .single();
 
-          const baseUrl = publicUrlConfig?.valor || 'https://coesa-propose-craft.lovable.app';
+          const baseUrl = publicUrlConfig?.valor || 'https://coesasolar.com.br';
           const novoLink = `${baseUrl}/proposta-inicial/${propostaId}?v=${cacheBust}&t=${Date.now()}`;
 
           // Update Bitrix24 if available
@@ -515,7 +515,7 @@ export async function resolveTechnicalIssue(
           .eq('chave', 'public_proposal_base_url')
           .single();
 
-        const baseUrl = publicUrlConfig?.valor || 'https://coesa-propose-craft.lovable.app';
+        const baseUrl = publicUrlConfig?.valor || 'https://coesasolar.com.br';
         const novoLink = `${baseUrl}/proposta-inicial/${propostaId}?v=${cacheBust}`;
 
         return {

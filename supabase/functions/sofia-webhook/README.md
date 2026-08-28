@@ -223,7 +223,7 @@ Webhook principal que recebe mensagens do WhatsApp via Z-API e orquestra toda a 
 
 ### cURL (Simular mensagem)
 ```bash
-curl -X POST 'https://cvcdweqybgfxywcelriq.supabase.co/functions/v1/sofia-webhook' \
+curl -X POST 'https://sapsikmekwfwcnpyvzed.supabase.co/functions/v1/sofia-webhook' \
   -H 'Content-Type: application/json' \
   -d '{
     "phone": "5534999887766",
@@ -235,7 +235,7 @@ curl -X POST 'https://cvcdweqybgfxywcelriq.supabase.co/functions/v1/sofia-webhoo
 
 ### Teste de Comando Operador
 ```bash
-curl -X POST 'https://cvcdweqybgfxywcelriq.supabase.co/functions/v1/sofia-webhook' \
+curl -X POST 'https://sapsikmekwfwcnpyvzed.supabase.co/functions/v1/sofia-webhook' \
   -H 'Content-Type: application/json' \
   -d '{
     "phone": "5534911111111",
