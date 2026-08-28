@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+branch=$(git symbolic-ref --quiet --short HEAD || true)
+if [ "$branch" = "main" ] && [ "${PUSH_MAIN:-}" != "1" ]; then
+  echo "[pre-push] BLOQUEADO: envie por branch e Pull Request." >&2
+  exit 1
+fi
+
+npm run preflight

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: __dirname,
   eslint: {
     // O código herdado da Lovable tem centenas de `any` pré-existentes;
     // o lint continua disponível manualmente via `npm run lint`
