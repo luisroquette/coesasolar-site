@@ -173,7 +173,7 @@ export async function runQualityGate(articleContent: string): Promise<QualityGat
     // platform timeout, o catch nunca roda, e o insertRunLog de erro nunca é gravado.
     const client = new OpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1', timeout: 60_000, maxRetries: 1 });
     const response = await client.chat.completions.create({
-      model: 'deepseek/deepseek-v4-pro',
+      model: 'z-ai/glm-5.3-flash',
       messages: [
         { role: 'system', content: JUDGE_SYSTEM_PROMPT },
         { role: 'user', content: articleContent },

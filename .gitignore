@@ -38,3 +38,11 @@ tsconfig.tsbuildinfo
 
 # lockfile gerado por `deno test`/`deno check` local (edge functions) — nunca foi versionado
 deno.lock
+supabase/.temp/
+
+# Graphify: versionar apenas relatório, HTML e JSON canônicos
+graphify-out/.graphify_*
+graphify-out/cache/
+graphify-out/cost.json
+graphify-out/manifest.json
+graphify-out/[0-9][0-9][0-9][0-9]-*/

@@ -206,7 +206,7 @@ describe('REGRESSÃO: deepseek — chamadas usam um model id ativo na DeepSeek, 
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const callArgs = createMock.mock.calls[0][0];
-    expect(callArgs.model).toBe('deepseek/deepseek-v4-flash');
+    expect(callArgs.model).toBe('deepseek/deepseek-v4-flash-0731');
     expect(callArgs.model).not.toBe('deepseek-chat');
   });
 
@@ -217,7 +217,7 @@ describe('REGRESSÃO: deepseek — chamadas usam um model id ativo na DeepSeek, 
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const callArgs = createMock.mock.calls[0][0];
-    expect(callArgs.model).toBe('deepseek/deepseek-v4-flash');
+    expect(callArgs.model).toBe('deepseek/deepseek-v4-flash-0731');
     expect(callArgs.model).not.toBe('deepseek-chat');
   });
 });
@@ -272,7 +272,7 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
     const args = createMock.mock.calls[0][0];
     expect(args.max_tokens).toBeGreaterThanOrEqual(1200); // ~2 tokens/palavra PT-BR de folga
-    expect(args.model).toBe('deepseek/deepseek-v4-flash');
+    expect(args.model).toBe('deepseek/deepseek-v4-flash-0731');
   });
 
   it('REGRESSÃO 25/08/2026 (achado E2E: 1 de 8 seções voltou vazia em produção): retenta 1x se vier vazio', async () => {
@@ -324,7 +324,7 @@ describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure n
 
     const args = createMock.mock.calls[0][0];
     expect(args.max_tokens).toBeGreaterThanOrEqual(4000); // generoso o bastante pra 9 seções + FAQ-7
-    expect(args.model).toBe('deepseek/deepseek-v4-flash');
+    expect(args.model).toBe('deepseek/deepseek-v4-flash-0731');
     expect(args.response_format).toEqual({ type: 'json_object' });
     expect(args.reasoning_effort).toBe('low');
   });

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const MODEL = 'deepseek/deepseek-v4-flash';
+const MODEL = 'deepseek/deepseek-v4-flash-0731';
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
