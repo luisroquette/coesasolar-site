@@ -1471,6 +1471,7 @@ export interface HotLeadAlertPayload {
   origem?: string;
   bitrix_lead_id?: string;
   conversa_id?: string;
+  alert_type?: 'hot_lead' | 'big_account';
 }
 
 export function validateHotLeadAlert(body: unknown): ValidationResult<HotLeadAlertPayload> {
@@ -1517,6 +1518,9 @@ export function validateHotLeadAlert(body: unknown): ValidationResult<HotLeadAle
     } else if (sanitized.lead_score < 0 || sanitized.lead_score > 100) {
       errors.push({ field: 'lead_score', message: 'lead_score must be 0-100', code: 'out_of_range' });
     }
+  }
+  if (sanitized.alert_type !== undefined && !['hot_lead', 'big_account'].includes(sanitized.alert_type)) {
+    errors.push({ field: 'alert_type', message: 'alert_type must be hot_lead or big_account', code: 'invalid_value' });
   }
   
   if (errors.length > 0) return { success: false, errors };

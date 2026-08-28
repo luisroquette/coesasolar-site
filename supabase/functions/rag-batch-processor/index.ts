@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import JSZip from "https://esm.sh/jszip@3.10.1";
+import { loadAsync } from "https://esm.sh/jszip@3.10.1";
 
 /**
  * rag-batch-processor: Processa arquivos da fila rag_sync_queue em lotes
@@ -117,7 +117,7 @@ function extractTextFromExcel(fileContent: ArrayBuffer): string {
 // Extrair texto de arquivos PowerPoint (pptx)
 async function extractTextFromPowerPoint(fileContent: ArrayBuffer): Promise<string> {
   try {
-    const zip = await JSZip.loadAsync(fileContent);
+    const zip = await loadAsync(fileContent);
     const textParts: string[] = [];
     
     // PPTX slides são armazenados em ppt/slides/slide{N}.xml
@@ -172,7 +172,7 @@ async function extractTextFromPowerPoint(fileContent: ArrayBuffer): Promise<stri
 // Extrair texto de arquivos Word (docx)
 async function extractTextFromDocx(fileContent: ArrayBuffer): Promise<string> {
   try {
-    const zip = await JSZip.loadAsync(fileContent);
+    const zip = await loadAsync(fileContent);
     const textParts: string[] = [];
     
     // DOCX armazena conteúdo principal em word/document.xml

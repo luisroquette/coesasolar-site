@@ -548,7 +548,8 @@ export type RAGCategory =
   | 'pos_venda'
   | 'cobranca'
   | 'suporte_tecnico'
-  | 'instalacao';
+  | 'instalacao'
+  | 'codigo_agente';
 
 /**
  * Stage-to-RAG category mapping configuration

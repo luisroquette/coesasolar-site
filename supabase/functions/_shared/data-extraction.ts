@@ -203,6 +203,7 @@ export interface ExtractedClientData {
   // NEW: Lower bound value support (Phase "Caso Edson")
   // When client says "acima de 600", we accept 600 as minimum and set this flag
   valorLowerBound?: boolean;          // True if value came from "acima de X" / "mais de X"
+  valorAmbiguo?: boolean;             // True if a range was normalized to its average
   valorOriginalTexto?: string;        // Original text for audit: "acima de 600 reais"
 }
 

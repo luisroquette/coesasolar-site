@@ -14,6 +14,7 @@ export type MotivoDescarte =
   | 'distribuidora_nao_reconhecida'
   | 'grupo_a' 
   | 'tarifa_social' 
+  | 'geracao_propria'
   | 'outro';
 
 export interface DisqualificationMessage {
@@ -64,6 +65,14 @@ Esse é um ótimo programa que já oferece um desconto significativo na sua cont
 Ficamos felizes que você já tem esse apoio! Se sua situação mudar no futuro, pode nos chamar. 💚`,
     mensagem_crm: 'Cliente com tarifa social/baixa renda',
     emoji: '🏠',
+    is_active: true,
+  },
+  geracao_propria: {
+    motivo: 'geracao_propria',
+    motivo_label: 'Cliente com geração própria',
+    mensagem_cliente: 'Se você já possui painéis solares instalados, nosso serviço não é compatível. Atendemos apenas quem ainda não tem geração própria.',
+    mensagem_crm: 'Cliente com geração própria - fora do escopo',
+    emoji: '☀️',
     is_active: true,
   },
   distribuidora_nao_atendida: {
@@ -263,6 +272,7 @@ export function getMotivoTextoMap(): Record<MotivoDescarte, string> {
     distribuidora_nao_reconhecida: FALLBACK_MESSAGES.distribuidora_nao_reconhecida.mensagem_crm,
     grupo_a: FALLBACK_MESSAGES.grupo_a.mensagem_crm,
     tarifa_social: FALLBACK_MESSAGES.tarifa_social.mensagem_crm,
+    geracao_propria: FALLBACK_MESSAGES.geracao_propria.mensagem_crm,
     outro: FALLBACK_MESSAGES.outro.mensagem_crm,
   };
 }

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -374,7 +374,7 @@ function getMimeType(path: string): string {
 }
 
 // Helper: create a signed URL for a file in Storage (valid for 5 minutes)
-async function getSignedUrl(supabase: ReturnType<typeof createClient>, storagePath: string): Promise<string> {
+async function getSignedUrl(supabase: SupabaseClient, storagePath: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from('documentos-clientes')
     .createSignedUrl(storagePath, 300); // 5 min expiry
@@ -387,7 +387,7 @@ async function getSignedUrl(supabase: ReturnType<typeof createClient>, storagePa
 }
 
 // Helper: download file from Storage and convert to base64 data URI (for PDFs only)
-async function downloadFileAsBase64(supabase: ReturnType<typeof createClient>, storagePath: string): Promise<string> {
+async function downloadFileAsBase64(supabase: SupabaseClient, storagePath: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from('documentos-clientes')
     .download(storagePath);
@@ -397,14 +397,13 @@ async function downloadFileAsBase64(supabase: ReturnType<typeof createClient>, s
   }
 
   const arrayBuffer = await data.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  const b64 = base64Encode(bytes);
+  const b64 = base64Encode(arrayBuffer);
   const mime = getMimeType(storagePath);
   return `data:${mime};base64,${b64}`;
 }
 
 // Helper: get file content for AI - signed URL for images, base64 for PDFs
-async function getFileContent(supabase: ReturnType<typeof createClient>, storagePath: string): Promise<{ dataUri?: string; signedUrl?: string; mime: string }> {
+async function getFileContent(supabase: SupabaseClient, storagePath: string): Promise<{ dataUri?: string; signedUrl?: string; mime: string }> {
   const mime = getMimeType(storagePath);
   
   if (mime === 'application/pdf') {
