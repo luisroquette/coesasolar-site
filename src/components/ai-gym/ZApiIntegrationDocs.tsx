@@ -14,7 +14,7 @@ interface ZApiIntegrationDocsProps {
   agentName: string;
 }
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://cvcdweqybgfxywcelriq.supabase.co';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sapsikmekwfwcnpyvzed.supabase.co';
 
 // Map agent_id to their dedicated webhook
 const AGENT_WEBHOOKS: Record<string, string> = {
