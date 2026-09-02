@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { claimBlogRunToday, insertArticle, insertRunLog, getPublishedKeywords, getLinkCandidates } from '@/lib/blog/supabase-blog';
+import { claimBlogRunToday, insertArticle, insertRunLog, getPublishedKeywords, getLinkCandidates, markAlertedIfFirstFailureToday } from '@/lib/blog/supabase-blog';
+import { sendFailureAlertEmail } from '@/lib/blog/alert';
 import { getNextPlannedEntry, markPublished, saveOutlineStructure, type EditorialBrief } from '@/lib/blog/editorial-calendar';
 import { fetchTopKeyword } from '@/lib/blog/gsc';
 import {
@@ -42,6 +43,18 @@ class PipelineDeadlineError extends Error {
   }
 }
 
+// Alerta em tempo real na 1ª falha do dia (achado 02/09/2026) — o dono só descobria uma
+// falha no relatório do Sentinel do dia SEGUINTE, tarde demais pra intervenção no mesmo dia
+// útil. markAlertedIfFirstFailureToday é atômico (só true na 1ª chamada do dia); retries
+// de cron subsequentes no mesmo dia não reenviam o alerta.
+async function alertOnFirstFailureToday(errorMsg: string, keyword: string | undefined): Promise<void> {
+  const isFirstFailureToday = await markAlertedIfFirstFailureToday().catch(() => false);
+  if (isFirstFailureToday) {
+    const runDate = new Date().toISOString().slice(0, 10);
+    await sendFailureAlertEmail({ keyword, error: errorMsg, runDate }).catch(() => {});
+  }
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization') ?? '';
   const cronSecret = process.env.CRON_SECRET;
@@ -60,6 +73,7 @@ export async function GET(request: NextRequest) {
   if (claim === 'error') {
     // Claim falhou por infra (RPC ausente/secret/transitório): NUNCA responder 200 aqui —
     // senão o cron da Vercel marca como sucesso, não re-tenta e o dia fica sem artigo em silêncio.
+    await alertOnFirstFailureToday('claim_failed', undefined);
     return NextResponse.json({ error: 'claim_failed' }, { status: 500 });
   }
 
@@ -323,6 +337,8 @@ export async function GET(request: NextRequest) {
       status: 'error',
       error: errorMsg,
     }).catch(() => {}); // não deixar o log falhar silenciar o erro principal
+
+    await alertOnFirstFailureToday(errorMsg, keyword);
 
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   } finally {

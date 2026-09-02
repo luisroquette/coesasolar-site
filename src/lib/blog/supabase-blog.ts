@@ -118,6 +118,22 @@ export async function claimBlogRunToday(): Promise<BlogClaimResult> {
   return interpretClaimResult(data, error);
 }
 
+/** Marca a 1ª falha do dia como "já alertada" — atômico igual claimBlogRunToday, só
+ *  devolve true na PRIMEIRA chamada (retries de cron do mesmo dia não reenviam alerta).
+ *  Erro de RPC nunca deve bloquear o pipeline: devolve false (fail-closed pro alerta,
+ *  fail-open pro pipeline — melhor perder um alerta do que travar a publicação). */
+export async function markAlertedIfFirstFailureToday(): Promise<boolean> {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase.rpc('coesa_blog_mark_alerted', {
+    p_secret: getCronSecret(),
+  });
+  if (error) {
+    console.error('[markAlertedIfFirstFailureToday] RPC error:', error.message);
+    return false;
+  }
+  return data === true;
+}
+
 export async function getPublishedKeywords(): Promise<string[]> {
   const supabase = getServiceClient();
   const { data } = await supabase

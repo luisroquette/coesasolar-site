@@ -15,13 +15,18 @@ const insertArticle = vi.fn();
 const insertRunLog = vi.fn();
 const getPublishedKeywords = vi.fn();
 const getLinkCandidates = vi.fn();
+const markAlertedIfFirstFailureToday = vi.fn();
 vi.mock('@/lib/blog/supabase-blog', () => ({
   claimBlogRunToday,
   insertArticle,
   insertRunLog,
   getPublishedKeywords,
   getLinkCandidates,
+  markAlertedIfFirstFailureToday,
 }));
+
+const sendFailureAlertEmail = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/lib/blog/alert', () => ({ sendFailureAlertEmail }));
 
 const getNextPlannedEntry = vi.fn();
 const markPublished = vi.fn();
@@ -92,6 +97,7 @@ describe("REGRESSÃO 02/09/2026 (E2E real): deadline interno sempre vence o SIGK
     insertRunLog.mockResolvedValue(undefined);
     saveOutlineStructure.mockResolvedValue(undefined);
     markPublished.mockResolvedValue(undefined);
+    markAlertedIfFirstFailureToday.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -183,6 +189,7 @@ describe('REGRESSÃO 02/09/2026: tolerância de 10% no piso de palavras do gate 
     insertRunLog.mockResolvedValue(undefined);
     saveOutlineStructure.mockResolvedValue(undefined);
     markPublished.mockResolvedValue(undefined);
+    markAlertedIfFirstFailureToday.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -250,5 +257,68 @@ describe('REGRESSÃO 02/09/2026: tolerância de 10% no piso de palavras do gate 
     const body = await response.json();
     expect(body.error).toBe('article_below_4050_words:4049');
     expect(insertArticle).not.toHaveBeenCalled();
+  });
+});
+
+// REGRESSÃO 02/09/2026: falha só ficava visível no relatório do Sentinel do dia SEGUINTE —
+// tarde demais pra intervenção no mesmo dia útil (foi a intervenção manual do dono que
+// salvou a publicação de hoje). markAlertedIfFirstFailureToday é atômico: só true na 1ª
+// falha do dia — retries de cron subsequentes no mesmo dia não devem reenviar o alerta.
+describe('REGRESSÃO 02/09/2026: alerta em tempo real na 1ª falha do dia', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.CRON_SECRET = 'test-secret';
+    claimBlogRunToday.mockResolvedValue('claimed');
+    getNextPlannedEntry.mockResolvedValue({
+      keyword: 'energia solar teste', relatedKeywords: [], competitors: [], attentionPoints: '',
+    });
+    insertRunLog.mockResolvedValue(undefined);
+    saveOutlineStructure.mockResolvedValue(undefined);
+    markPublished.mockResolvedValue(undefined);
+    generateArticleWithSections.mockRejectedValue(new Error('deepseek_structure_failed'));
+  });
+
+  afterEach(() => {
+    delete process.env.CRON_SECRET;
+  });
+
+  it('1ª falha do dia (RPC devolve true): dispara o alerta com o erro e a keyword certos', async () => {
+    markAlertedIfFirstFailureToday.mockResolvedValue(true);
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    await GET(request);
+
+    expect(sendFailureAlertEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ keyword: 'energia solar teste', error: 'deepseek_structure_failed' }),
+    );
+  });
+
+  it('falha subsequente no mesmo dia (RPC devolve false): NÃO reenvia o alerta', async () => {
+    markAlertedIfFirstFailureToday.mockResolvedValue(false);
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    await GET(request);
+
+    expect(sendFailureAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it('falha no claim (infra) também conta como 1ª falha do dia e dispara alerta', async () => {
+    claimBlogRunToday.mockResolvedValue('error');
+    markAlertedIfFirstFailureToday.mockResolvedValue(true);
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    expect(sendFailureAlertEmail).toHaveBeenCalledWith(expect.objectContaining({ error: 'claim_failed' }));
   });
 });
