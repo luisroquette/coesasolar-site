@@ -230,9 +230,18 @@ export async function GET(request: NextRequest) {
       console.warn(`[blog/generate] Quality gate score final: ${gateResult.judged.score}`);
     }
 
+    // REGRESSÃO 02/09/2026: gate exigia o piso EXATO (4500) contra um total que é SOMA de
+    // 7-9 seções escritas "sem contar palavra" (instrução deliberada — contar produz prosa
+    // artificialmente inchada). LLM não bate número exato por composição; variância de 1-2%
+    // pra menos é normal e derrubava artigos praticamente prontos (achado real: 4421/4500,
+    // 1,8% abaixo). Tolerância de 10% no GATE DE PUBLICAÇÃO — MIN_ARTICLE_WORDS continua
+    // intocado como alvo passado ao modelo (isValidStructure/prompt de estrutura), só o piso
+    // de aceitar-e-publicar fica mais realista.
+    const PUBLISH_WORD_COUNT_TOLERANCE = 0.9;
+    const minPublishableWords = Math.floor(MIN_ARTICLE_WORDS * PUBLISH_WORD_COUNT_TOLERANCE);
     const finalWordCount = countArticleWords(finalContentWithCtas);
-    if (finalWordCount < MIN_ARTICLE_WORDS) {
-      throw new Error(`article_below_${MIN_ARTICLE_WORDS}_words:${finalWordCount}`);
+    if (finalWordCount < minPublishableWords) {
+      throw new Error(`article_below_${minPublishableWords}_words:${finalWordCount}`);
     }
 
     // 4. Salvar artigo (com collision handling interno)
