@@ -15,7 +15,10 @@ vi.mock('@/lib/blog/supabase-blog', () => ({
   insertRunLog: vi.fn(),
   getPublishedKeywords: vi.fn(),
   getLinkCandidates: vi.fn(),
+  markAlertedIfFirstFailureToday: vi.fn().mockResolvedValue(true),
 }));
+
+vi.mock('@/lib/blog/alert', () => ({ sendFailureAlertEmail: vi.fn().mockResolvedValue(undefined) }));
 
 vi.mock('@/lib/blog/editorial-calendar', () => ({
   getNextPlannedEntry: vi.fn(),
