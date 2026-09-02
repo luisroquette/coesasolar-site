@@ -1,8 +1,15 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { sendFailureAlertEmail } from '@/lib/blog/alert';
 
 const MODEL = 'deepseek/deepseek-v4-flash-0731';
+
+// REGRESSÃO 02/09/2026: rota já existia mas não estava agendada nem alertava em falha —
+// virou canário: cron às 7h UTC (2h ANTES do 1º /api/blog/generate, 9h UTC), fora do fluxo
+// de produção. Detecta modelo/provedor quebrado ANTES do cron de publicação bater nisso
+// (achado real do PR #17: modelo aposentado só apareceu quando o cron real já tinha
+// falhado ao vivo).
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -12,6 +19,7 @@ export async function GET(request: NextRequest) {
 
   const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) {
+    await alertCanaryFailure('OpenRouter key not configured');
     return NextResponse.json({ ok: false, error: 'OpenRouter key not configured' }, { status: 503 });
   }
 
@@ -36,6 +44,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
+      await alertCanaryFailure(`OpenRouter request failed (HTTP ${response.status})`);
       return NextResponse.json(
         { ok: false, error: 'OpenRouter request failed', providerStatus: response.status },
         { status: 502 },
@@ -43,9 +52,18 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, model: MODEL });
-  } catch {
+  } catch (err) {
+    await alertCanaryFailure(err instanceof Error ? err.message : String(err));
     return NextResponse.json({ ok: false, error: 'OpenRouter request failed' }, { status: 502 });
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function alertCanaryFailure(reason: string): Promise<void> {
+  await sendFailureAlertEmail({
+    keyword: undefined,
+    error: `canary_failed (${MODEL}): ${reason}`,
+    runDate: new Date().toISOString().slice(0, 10),
+  }).catch(() => {});
 }

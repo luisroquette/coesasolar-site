@@ -21,6 +21,7 @@ import { injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
 import { countArticleWords, MIN_ARTICLE_WORDS, validateArticle } from '@/lib/blog/validate';
 import { runQualityGateLoop, type QualityGateResult } from '@/lib/blog/quality-gate';
 import { hasTimeBudget } from '@/lib/blog/time-budget';
+import { checkOpenRouterBalance } from '@/lib/blog/openrouter-budget';
 import { scoreInternalLinks } from '@/lib/blog/internal-links';
 import { distributeArticle, buildDistributionArticle } from '@/lib/blog/distribution';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
@@ -89,6 +90,14 @@ export async function GET(request: NextRequest) {
   const withinBudget = () => hasTimeBudget(Date.now() - t0, maxDuration, PUBLISH_SAFETY_MARGIN_MS);
 
   const runPipeline = async (): Promise<NextResponse> => {
+    // 0. Circuit breaker de saldo (02/09/2026): a conta OpenRouter compartilhada já zerou
+    //    uma vez — checar ANTES de queimar tokens numa geração fadada a 402 no meio.
+    //    Fail-open: só bloqueia com saldo baixo CONFIRMADO, nunca por falha da checagem.
+    const balance = await checkOpenRouterBalance();
+    if (!balance.ok) {
+      throw new Error(`openrouter_balance_low:$${balance.remaining?.toFixed(2)}`);
+    }
+
     // 1. Keyword do dia: pauta do calendário TEM precedência (o dono agenda);
     //    dia sem pauta cai no seed rotativo/GSC.
     let brief: EditorialBrief | null = null;
