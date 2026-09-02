@@ -19,6 +19,7 @@ const {
   REQUIRED_FIELDS,
   isValidStructure,
   describeStructureInvalidity,
+  titleContainsKeywordInOrder,
   parseStructure,
   writeSection,
   generateArticleWithSections,
@@ -614,6 +615,43 @@ describe('REGRESSÃO 26/08/2026: isValidStructure aceita keyword separada por po
   it('título sem a keyword (ordem quebrada) continua reprovado', () => {
     const estrutura = makeEstrutura('Vale a Pena Investir em Geração Compartilhada?');
     expect(isValidStructure(estrutura, 'geração distribuída compartilhada vale a pena')).toBe(false);
+  });
+});
+
+// REGRESSÃO 02/09/2026 (achado real em produção): mesmo já tolerando pontuação (26/08), a
+// comparação por substring contígua ainda reprovava título gramaticalmente correto com
+// preposição natural intercalada — "luz EM Minas Gerais" vs keyword "luz Minas Gerais".
+describe('REGRESSÃO 02/09/2026: titleContainsKeywordInOrder aceita palavra de ligação natural entre a keyword', () => {
+  const makeEstrutura = (title: string) => ({
+    title,
+    page_title: title,
+    slug: 'desconto-conta-de-luz-minas-gerais',
+    meta_desc: 'meta',
+    cover_image_prompt: 'cover',
+    cover_alt: 'alt',
+    category: 'faq',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 650, image_prompt: 'p',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
+  });
+
+  it('achado real: "luz EM Minas Gerais" aceita a keyword "luz Minas Gerais" (preposição natural)', () => {
+    expect(titleContainsKeywordInOrder('Desconto na conta de luz em Minas Gerais', 'desconto na conta de luz Minas Gerais')).toBe(true);
+    expect(isValidStructure(makeEstrutura('Desconto na conta de luz em Minas Gerais: economize até 30%'), 'desconto na conta de luz Minas Gerais')).toBe(true);
+  });
+
+  it('palavra da keyword ausente (não é só preposição extra) continua reprovado', () => {
+    expect(titleContainsKeywordInOrder('Desconto na conta de luz', 'desconto na conta de luz Minas Gerais')).toBe(false);
+  });
+
+  it('palavras da keyword fora de ordem continuam reprovadas', () => {
+    expect(titleContainsKeywordInOrder('Minas Gerais: desconto na conta de luz', 'desconto na conta de luz Minas Gerais')).toBe(false);
+  });
+
+  it('keyword vazia sempre aceita (guarda de borda)', () => {
+    expect(titleContainsKeywordInOrder('Qualquer título', '')).toBe(true);
   });
 });
 

@@ -224,9 +224,28 @@ export function normalizeKeywordText(s: string): string {
     .trim();
 }
 
+// REGRESSÃO 02/09/2026: a comparação por substring contígua (mesmo já tolerando pontuação
+// desde 26/08) ainda reprovava título gramaticalmente correto que insere uma preposição
+// natural entre palavras da keyword — achado real: keyword "desconto na conta de luz Minas
+// Gerais", título "Desconto na conta de luz EM Minas Gerais" reprovado só pelo "em". Trocado
+// de substring pra subsequência: as palavras da keyword continuam precisando aparecer NA
+// ORDEM, só passam a aceitar palavras de ligação intercaladas (títulos são curtos — baixo
+// risco de correspondência acidental).
+export function titleContainsKeywordInOrder(title: string, keyword: string): boolean {
+  const titleWords = normalizeKeywordText(title).split(' ').filter(Boolean);
+  const keywordWords = normalizeKeywordText(keyword).split(' ').filter(Boolean);
+  if (keywordWords.length === 0) return true;
+  let i = 0;
+  for (const word of titleWords) {
+    if (word === keywordWords[i]) i++;
+    if (i === keywordWords.length) return true;
+  }
+  return false;
+}
+
 export function isValidStructure(s: ArticleStructure, keyword: string): boolean {
   return (
-    !!s?.title && normalizeKeywordText(s.title).includes(normalizeKeywordText(keyword)) &&
+    !!s?.title && titleContainsKeywordInOrder(s.title, keyword) &&
     !!s.slug && !!s.meta_desc && !!s.cover_image_prompt &&
     Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
     s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
@@ -247,7 +266,7 @@ export function describeStructureInvalidity(s: ArticleStructure | null, keyword:
   if (!s) return ['json_parse_failed_or_null'];
   const reasons: string[] = [];
   if (!s.title) reasons.push('title_ausente');
-  else if (!normalizeKeywordText(s.title).includes(normalizeKeywordText(keyword))) reasons.push('title_sem_keyword');
+  else if (!titleContainsKeywordInOrder(s.title, keyword)) reasons.push('title_sem_keyword');
   if (!s.slug) reasons.push('slug_ausente');
   if (!s.meta_desc) reasons.push('meta_desc_ausente');
   if (!s.cover_image_prompt) reasons.push('cover_image_prompt_ausente');
