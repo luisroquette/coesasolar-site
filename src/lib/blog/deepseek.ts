@@ -238,6 +238,44 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
   );
 }
 
+// REGRESSÃO 02/09/2026: generateArticleStructure logava só "Estrutura inválida", sem dizer
+// QUAL regra falhou nem mostrar o texto bruto — impossível saber se foi content vazio
+// (reasoning_content do modelo comendo o teto, ver reference_deepseek_v4_reasoning_gotchas.md)
+// ou uma violação real de formato (título sem keyword, seção fora do range etc). Espelha
+// isValidStructure regra a regra, mas devolve o motivo em vez de só true/false.
+export function describeStructureInvalidity(s: ArticleStructure | null, keyword: string): string[] {
+  if (!s) return ['json_parse_failed_or_null'];
+  const reasons: string[] = [];
+  if (!s.title) reasons.push('title_ausente');
+  else if (!normalizeKeywordText(s.title).includes(normalizeKeywordText(keyword))) reasons.push('title_sem_keyword');
+  if (!s.slug) reasons.push('slug_ausente');
+  if (!s.meta_desc) reasons.push('meta_desc_ausente');
+  if (!s.cover_image_prompt) reasons.push('cover_image_prompt_ausente');
+  if (!Array.isArray(s.sections)) reasons.push('sections_nao_e_array');
+  else {
+    if (s.sections.length < MIN_SECTIONS || s.sections.length > MAX_SECTIONS) {
+      reasons.push(`sections_count_${s.sections.length}_fora_de_${MIN_SECTIONS}-${MAX_SECTIONS}`);
+    }
+    s.sections.forEach((sec, i) => {
+      if (!sec.h2 || !sec.content_brief || !sec.image_prompt) reasons.push(`section_${i}_campo_ausente`);
+      if (!(sec.word_target >= 400 && sec.word_target <= 700)) reasons.push(`section_${i}_word_target_${sec.word_target}_fora_de_400-700`);
+    });
+    const total = s.sections.reduce((sum, sec) => sum + sec.word_target, 0);
+    if (total < MIN_ARTICLE_WORDS) reasons.push(`soma_word_target_${total}_abaixo_de_${MIN_ARTICLE_WORDS}`);
+  }
+  if (!Array.isArray(s.faq)) reasons.push('faq_nao_e_array');
+  else {
+    if (s.faq.length !== FAQ_COUNT) reasons.push(`faq_count_${s.faq.length}_diferente_de_${FAQ_COUNT}`);
+    s.faq.forEach((f, i) => { if (!f.question || !f.answer) reasons.push(`faq_${i}_campo_ausente`); });
+  }
+  if (!Array.isArray(s.summary_bullets)) reasons.push('summary_bullets_nao_e_array');
+  else {
+    if (s.summary_bullets.length < 3 || s.summary_bullets.length > 5) reasons.push(`summary_bullets_count_${s.summary_bullets.length}_fora_de_3-5`);
+    if (s.summary_bullets.some(b => !b)) reasons.push('summary_bullets_com_item_vazio');
+  }
+  return reasons;
+}
+
 // Teto de saída da estrutura. ACHADO 25/08/2026 (teste E2E em produção): deepseek-v4-flash
 // é modelo de raciocínio — parte do max_tokens vai pro campo interno reasoning_content,
 // nunca aparece em `content` (reference_deepseek_v4_reasoning_gotchas.md, item 2-3). 8000
@@ -269,8 +307,15 @@ export async function generateArticleStructure(
     console.warn(`[deepseek] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
+    // REGRESSÃO 02/09/2026: sem isso não dava pra saber SE era content vazio (reasoning
+    // comendo o teto) ou uma violação de formato específica — texto truncado nos primeiros
+    // 300 chars evita despejar um artigo inteiro no log.
+    console.warn(
+      `[deepseek] Estrutura inválida na tentativa ${attempt}: ${describeStructureInvalidity(structure, keyword).join(', ')} ` +
+      `(texto: ${text.length} chars${text ? `, início: ${text.slice(0, 300)}` : ' — VAZIO'})`,
+    );
     if (attempt === 2) break;
-    console.warn(`[deepseek] Estrutura inválida na tentativa ${attempt}. Retentando...`);
+    console.warn(`[deepseek] Retentando estrutura (tentativa ${attempt + 1})...`);
   }
   throw new Error('deepseek_structure_failed');
 }
