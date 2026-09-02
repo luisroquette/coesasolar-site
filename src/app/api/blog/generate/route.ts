@@ -24,6 +24,24 @@ import { scoreInternalLinks } from '@/lib/blog/internal-links';
 import { distributeArticle, buildDistributionArticle } from '@/lib/blog/distribution';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
 
+// REGRESSÃO 02/09/2026: a Vercel mata a função (SIGKILL) no maxDuration sem deixar o catch
+// rodar — insertRunLog nunca é chamado e a linha do claim fica presa em 'running' pra sempre
+// (só é reclamada pelo cron do dia seguinte, perdendo o dia sem publicar e sem erro visível).
+// Recorrência confirmada em 27/08, 01/09 e 02/09 — o guard de fases opcionais (abaixo) reduz a
+// chance, mas não cobre TODA fase (estrutura/seções, capa, insertArticle continuam sem guard,
+// e uma fase nova futura sem guard reabriria o mesmo buraco). DEADLINE_MS é o backstop: um
+// timer em JS (checável) que SEMPRE vence a corrida contra o SIGKILL da Vercel (não checável)
+// porque dispara antes — 30s de margem pro catch + insertRunLog(error) + response terminarem.
+const DEADLINE_MARGIN_MS = 30_000;
+const PIPELINE_DEADLINE_MS = maxDuration * 1000 - DEADLINE_MARGIN_MS;
+
+class PipelineDeadlineError extends Error {
+  constructor() {
+    super('pipeline_deadline_exceeded');
+    this.name = 'PipelineDeadlineError';
+  }
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization') ?? '';
   const cronSecret = process.env.CRON_SECRET;
@@ -49,17 +67,14 @@ export async function GET(request: NextRequest) {
   const t0 = Date.now();
   const lap = (label: string) => console.warn(`[blog/generate] ${label}: +${Math.round((Date.now() - t0) / 1000)}s`);
 
-  // REGRESSÃO 02/09/2026: a Vercel mata a função (SIGKILL) no maxDuration sem deixar o
-  // catch rodar — insertRunLog nunca é chamado e a linha do claim fica presa em 'running'
-  // pra sempre (só é reclamada pelo cron do dia seguinte, perdendo o dia sem publicar e
-  // sem erro visível). generateAndUploadBodyImages/Infographic/runQualityGateLoop são as
-  // fases opcionais mais caras e vêm DEPOIS da capa — pular cada uma se não sobrar tempo
-  // seguro pro publish (insertArticle+insertRunLog+revalidate) garante que o pipeline
-  // sempre termina bem antes do hard-kill, mesmo em dias com API de imagem/LLM lenta.
+  // generateAndUploadBodyImages/Infographic/runQualityGateLoop são as fases opcionais mais
+  // caras e vêm DEPOIS da capa — pular cada uma se não sobrar tempo seguro evita bater no
+  // DEADLINE_MS na maioria dos dias, publicando com o que já foi gerado em vez de perder o
+  // artigo inteiro. Camada 1 de defesa (graceful); PIPELINE_DEADLINE_MS é a camada 2 (backstop).
   const PUBLISH_SAFETY_MARGIN_MS = 60_000;
   const withinBudget = () => hasTimeBudget(Date.now() - t0, maxDuration, PUBLISH_SAFETY_MARGIN_MS);
 
-  try {
+  const runPipeline = async (): Promise<NextResponse> => {
     // 1. Keyword do dia: pauta do calendário TEM precedência (o dono agenda);
     //    dia sem pauta cai no seed rotativo/GSC.
     let brief: EditorialBrief | null = null;
@@ -276,7 +291,20 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, slug: finalSlug, warnings });
+  };
 
+  let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+  const pipelineDeadline = new Promise<never>((_, reject) => {
+    deadlineTimer = setTimeout(() => reject(new PipelineDeadlineError()), PIPELINE_DEADLINE_MS);
+  });
+
+  try {
+    // Promise.race não cancela o perdedor: se o deadline vencer, runPipeline() segue rodando
+    // em segundo plano até a Vercel matar o processo em maxDuration — mas como o RPC de
+    // insertRunLog só atualiza linhas com status='running' (coesa_blog_insert_run_log), a
+    // escrita de erro abaixo já muda o status e qualquer insertRunLog tardio do runPipeline
+    // abandonado vira no-op (0 linhas afetadas), nunca sobrescreve nem duplica o veredito.
+    return await Promise.race([runPipeline(), pipelineDeadline]);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('[blog/generate] Pipeline falhou:', errorMsg);
@@ -288,5 +316,7 @@ export async function GET(request: NextRequest) {
     }).catch(() => {}); // não deixar o log falhar silenciar o erro principal
 
     return NextResponse.json({ error: errorMsg }, { status: 500 });
+  } finally {
+    clearTimeout(deadlineTimer);
   }
 }
