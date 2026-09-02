@@ -693,3 +693,64 @@ describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª te
     expect(secondUser).toContain('geração distribuída compartilhada vale a pena');
   });
 });
+
+// REGRESSÃO 02/09/2026: as 2 primeiras tentativas usavam o MESMO modelo — um dia ruim do
+// modelo principal (achado real: reasoning comendo o teto repetidamente) derrubava as 2
+// igual. A 3ª tentativa agora troca de modelo (diversifica o risco em vez de repetir a
+// mesma aposta).
+describe('REGRESSÃO 02/09/2026: generateArticleStructure troca de modelo na 3ª tentativa (fallback)', () => {
+  const makeEstrutura = (title: string) => ({
+    title,
+    page_title: title,
+    slug: 'placa-solar',
+    meta_desc: 'meta',
+    cover_image_prompt: 'cover',
+    cover_alt: 'alt',
+    category: 'faq',
+    sections: Array.from({ length: 7 }, (_, i) => ({
+      h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 650, image_prompt: 'p',
+    })),
+    faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+    summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
+  });
+
+  it('1ª e 2ª tentativa usam o modelo principal; a 3ª usa o fallback', async () => {
+    const invalida = makeEstrutura('Guia genérico sem a keyword');
+    const valida = makeEstrutura('Placa Solar: Guia Completo 2026');
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(invalida) } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(invalida) } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    const result = await generateArticleStructure('placa solar');
+
+    expect(result.title).toBe('Placa Solar: Guia Completo 2026');
+    expect(createMock).toHaveBeenCalledTimes(3);
+    expect(createMock.mock.calls[0][0].model).toBe('deepseek/deepseek-v4-flash-0731');
+    expect(createMock.mock.calls[1][0].model).toBe('deepseek/deepseek-v4-flash-0731');
+    expect(createMock.mock.calls[2][0].model).toBe('z-ai/glm-5.3-flash');
+  });
+
+  it('fallback NÃO envia reasoning_effort (parâmetro específico do modelo de raciocínio DeepSeek)', async () => {
+    const invalida = makeEstrutura('Guia genérico sem a keyword');
+    const valida = makeEstrutura('Placa Solar: Guia Completo 2026');
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(invalida) } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(invalida) } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    await generateArticleStructure('placa solar');
+
+    expect(createMock.mock.calls[0][0].reasoning_effort).toBe('low');
+    expect(createMock.mock.calls[2][0].reasoning_effort).toBeUndefined();
+    expect(createMock.mock.calls[2][0].response_format).toEqual({ type: 'json_object' });
+  });
+
+  it('todas as 3 tentativas falham (mesmo com fallback): lança deepseek_structure_failed', async () => {
+    const invalida = makeEstrutura('Guia genérico sem a keyword');
+    createMock.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(invalida) } }] });
+
+    await expect(generateArticleStructure('placa solar')).rejects.toThrow('deepseek_structure_failed');
+    expect(createMock).toHaveBeenCalledTimes(3);
+  });
+});

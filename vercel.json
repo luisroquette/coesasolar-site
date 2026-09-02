@@ -6,7 +6,15 @@
     },
     {
       "path": "/api/blog/generate",
+      "schedule": "0 11 * * 1-5"
+    },
+    {
+      "path": "/api/blog/generate",
       "schedule": "30 13 * * 1-5"
+    },
+    {
+      "path": "/api/blog/generate",
+      "schedule": "0 16 * * 1-5"
     },
     {
       "path": "/api/blog/generate",

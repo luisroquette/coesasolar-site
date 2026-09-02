@@ -303,13 +303,33 @@ export function describeStructureInvalidity(s: ArticleStructure | null, keyword:
 // termo: 4x o valor que deu vazio, sem esticar a conexão o bastante pra derrubar de novo.
 const STRUCTURE_MAX_TOKENS = 12000;
 
+const PRIMARY_STRUCTURE_MODEL = 'deepseek/deepseek-v4-flash-0731';
+// REGRESSÃO 02/09/2026: as 3 tentativas automáticas do dia usavam o MESMO modelo — um dia
+// ruim do provedor (ex.: reasoning_content comendo o teto de tokens repetidamente) derrubava
+// as 3 igual. z-ai/glm-5.3-flash já é usado neste account OpenRouter (quality-gate.ts) —
+// fallback comprovado, não uma aposta nova. Só entra na 3ª tentativa de
+// generateArticleStructure (não muda writeSection/regenerateWithFeedback).
+export const FALLBACK_STRUCTURE_MODEL = 'z-ai/glm-5.3-flash';
+
+// As 2 primeiras tentativas usam PRIMARY_STRUCTURE_MODEL (mesmo modelo); a 3ª troca pra
+// FALLBACK_STRUCTURE_MODEL — diversifica o risco em vez de repetir a mesma aposta 3x. Um
+// dia ruim do modelo principal (ex.: reasoning comendo o teto repetidamente) não derruba
+// mais o dia inteiro sozinho.
+const STRUCTURE_MODELS_BY_ATTEMPT: readonly string[] = [
+  PRIMARY_STRUCTURE_MODEL,
+  PRIMARY_STRUCTURE_MODEL,
+  FALLBACK_STRUCTURE_MODEL,
+];
+
 export async function generateArticleStructure(
   keyword: string,
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleStructure> {
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const maxAttempts = STRUCTURE_MODELS_BY_ATTEMPT.length;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const tAttempt = Date.now();
+    const model = STRUCTURE_MODELS_BY_ATTEMPT[attempt - 1];
     // REGRESSÃO 26/08/2026: a 2ª tentativa repetia o MESMO prompt e, quando o defeito
     // era determinístico (ex.: título sem a keyword exata), falhava do mesmo jeito. A
     // re-tentativa agora recebe o motivo do fracasso pra corrigir em vez de repetir o erro.
@@ -322,19 +342,20 @@ export async function generateArticleStructure(
       buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
       'coesasolar/blog/article-structure',
       STRUCTURE_MAX_TOKENS,
+      model,
     );
-    console.warn(`[deepseek] tentativa ${attempt} de estrutura levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
+    console.warn(`[deepseek] tentativa ${attempt} de estrutura (${model}) levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
     // REGRESSÃO 02/09/2026: sem isso não dava pra saber SE era content vazio (reasoning
     // comendo o teto) ou uma violação de formato específica — texto truncado nos primeiros
     // 300 chars evita despejar um artigo inteiro no log.
     console.warn(
-      `[deepseek] Estrutura inválida na tentativa ${attempt}: ${describeStructureInvalidity(structure, keyword).join(', ')} ` +
+      `[deepseek] Estrutura inválida na tentativa ${attempt} (${model}): ${describeStructureInvalidity(structure, keyword).join(', ')} ` +
       `(texto: ${text.length} chars${text ? `, início: ${text.slice(0, 300)}` : ' — VAZIO'})`,
     );
-    if (attempt === 2) break;
-    console.warn(`[deepseek] Retentando estrutura (tentativa ${attempt + 1})...`);
+    if (attempt === maxAttempts) break;
+    console.warn(`[deepseek] Retentando estrutura (tentativa ${attempt + 1}, modelo ${STRUCTURE_MODELS_BY_ATTEMPT[attempt]})...`);
   }
   throw new Error('deepseek_structure_failed');
 }
@@ -825,7 +846,7 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
   );
 }
 
-async function askDeepseek(system: string, user: string, route: string, maxTokens?: number): Promise<string> {
+async function askDeepseek(system: string, user: string, route: string, maxTokens?: number, model: string = PRIMARY_STRUCTURE_MODEL): Promise<string> {
   // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
   // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
   // 150s (não 90s) quando maxTokens é passado (generateArticleStructure): achado 25/08/2026
@@ -845,7 +866,7 @@ async function askDeepseek(system: string, user: string, route: string, maxToken
   // truncamento silencioso que motivou max_tokens explícito em writeSection (Task 2).
   const response = await client.chat.completions.create({
     user: route,
-    model: 'deepseek/deepseek-v4-flash-0731',
+    model,
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },
@@ -854,10 +875,11 @@ async function askDeepseek(system: string, user: string, route: string, maxToken
     // A chamada com maxTokens é a estrutura JSON. JSON mode impede cercas/texto extra;
     // reasoning low preserva o orçamento para o conteúdo visível em vez de consumir o
     // teto pensando e truncar no meio de `sections` (incidente real de 26/08/2026).
-    ...(maxTokens !== undefined ? {
-      response_format: { type: 'json_object' as const },
-      reasoning_effort: 'low' as const,
-    } : {}),
+    // reasoning_effort é específico do modelo de raciocínio DeepSeek — omitido no fallback
+    // (z-ai/glm-5.3-flash já roda sem esse parâmetro em quality-gate.ts, sem garantia de
+    // suporte por outro provedor).
+    ...(maxTokens !== undefined ? { response_format: { type: 'json_object' as const } } : {}),
+    ...(maxTokens !== undefined && model === PRIMARY_STRUCTURE_MODEL ? { reasoning_effort: 'low' as const } : {}),
     ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
   });
   const choice = response.choices[0];
