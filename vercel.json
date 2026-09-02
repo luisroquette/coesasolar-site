@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/ai/health",
+      "schedule": "0 7 * * 1-5"
+    },
+    {
       "path": "/api/blog/generate",
       "schedule": "0 9 * * 1-5"
     },

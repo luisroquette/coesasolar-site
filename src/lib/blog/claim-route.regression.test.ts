@@ -19,6 +19,7 @@ vi.mock('@/lib/blog/supabase-blog', () => ({
 }));
 
 vi.mock('@/lib/blog/alert', () => ({ sendFailureAlertEmail: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/lib/blog/openrouter-budget', () => ({ checkOpenRouterBalance: vi.fn().mockResolvedValue({ ok: true, remaining: 50 }) }));
 
 vi.mock('@/lib/blog/editorial-calendar', () => ({
   getNextPlannedEntry: vi.fn(),

@@ -28,6 +28,9 @@ vi.mock('@/lib/blog/supabase-blog', () => ({
 const sendFailureAlertEmail = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/lib/blog/alert', () => ({ sendFailureAlertEmail }));
 
+const checkOpenRouterBalance = vi.fn().mockResolvedValue({ ok: true, remaining: 50 });
+vi.mock('@/lib/blog/openrouter-budget', () => ({ checkOpenRouterBalance }));
+
 const getNextPlannedEntry = vi.fn();
 const markPublished = vi.fn();
 const saveOutlineStructure = vi.fn();
@@ -320,5 +323,54 @@ describe('REGRESSÃO 02/09/2026: alerta em tempo real na 1ª falha do dia', () =
 
     expect(response.status).toBe(500);
     expect(sendFailureAlertEmail).toHaveBeenCalledWith(expect.objectContaining({ error: 'claim_failed' }));
+  });
+});
+
+// REGRESSÃO 02/09/2026: circuit breaker de saldo — a conta OpenRouter compartilhada já
+// zerou uma vez (Doctor do ig-sentinel, 30-31/08). Checar ANTES de queimar tokens numa
+// geração fadada a falhar no meio evita gastar as 5 tentativas do dia inteiras à toa.
+describe('REGRESSÃO 02/09/2026: circuit breaker de saldo bloqueia ANTES de gerar', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.CRON_SECRET = 'test-secret';
+    claimBlogRunToday.mockResolvedValue('claimed');
+    getNextPlannedEntry.mockResolvedValue({
+      keyword: 'energia solar teste', relatedKeywords: [], competitors: [], attentionPoints: '',
+    });
+    insertRunLog.mockResolvedValue(undefined);
+    markAlertedIfFirstFailureToday.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    delete process.env.CRON_SECRET;
+  });
+
+  it('saldo baixo: bloqueia SEM chamar generateArticleWithSections (nunca queima tokens à toa)', async () => {
+    checkOpenRouterBalance.mockResolvedValue({ ok: false, remaining: 0.42 });
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe('openrouter_balance_low:$0.42');
+    expect(generateArticleWithSections).not.toHaveBeenCalled();
+    expect(sendFailureAlertEmail).toHaveBeenCalledWith(expect.objectContaining({ error: 'openrouter_balance_low:$0.42' }));
+  });
+
+  it('saldo ok (ou checagem indisponível): segue gerando normalmente', async () => {
+    checkOpenRouterBalance.mockResolvedValue({ ok: true, remaining: null });
+    generateArticleWithSections.mockRejectedValue(new Error('outro_erro_qualquer'));
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    await GET(request);
+
+    expect(generateArticleWithSections).toHaveBeenCalled();
   });
 });
