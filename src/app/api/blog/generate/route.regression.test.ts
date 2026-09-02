@@ -55,8 +55,9 @@ vi.mock('@/lib/blog/image-body', () => ({
   injectInlineCtas: vi.fn((content: string) => content),
 }));
 
+const countArticleWords = vi.fn(() => 5000);
 vi.mock('@/lib/blog/validate', () => ({
-  countArticleWords: vi.fn(() => 5000),
+  countArticleWords,
   MIN_ARTICLE_WORDS: 4500,
   validateArticle: vi.fn(() => ({ ok: true, issues: [] })),
 }));
@@ -129,7 +130,7 @@ describe("REGRESSÃO 02/09/2026 (E2E real): deadline interno sempre vence o SIGK
     expect(270_000).toBeLessThan(300_000);
   });
 
-  it('pipeline normal (sem travamento) não é afetado pelo deadline — resolve e limpa o timer', async () => {
+  async function setupHappyPathMocks() {
     generateArticleWithSections.mockResolvedValue({
       title: 'T', slug: 'slug-ok', meta_desc: 'M', image_prompt: 'p', content: 'conteúdo',
       structure: { sections: [], faq: [] }, bodies: [], sectionImagePrompts: [],
@@ -147,6 +148,10 @@ describe("REGRESSÃO 02/09/2026 (E2E real): deadline interno sempre vence o SIGK
     (generateAndUploadBodyImages as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (generateAndUploadInfographic as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     insertArticle.mockResolvedValue('slug-ok');
+  }
+
+  it('pipeline normal (sem travamento) não é afetado pelo deadline — resolve e limpa o timer', async () => {
+    await setupHappyPathMocks();
 
     const { GET } = await import('./route');
     const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
@@ -159,5 +164,91 @@ describe("REGRESSÃO 02/09/2026 (E2E real): deadline interno sempre vence o SIGK
     const body = await response.json();
     expect(body.success).toBe(true);
     expect(insertRunLog).toHaveBeenCalledWith({ keyword: 'energia solar teste', status: 'success' });
+  });
+});
+
+// REGRESSÃO 02/09/2026 (achado real em produção): o gate exigia o piso EXATO de 4500
+// palavras contra um total que é SOMA de 7-9 seções escritas "sem contar palavra"
+// (instrução deliberada no prompt — contar produz prosa artificialmente inchada). Achado
+// real: artigo com 4421/4500 (1,8% abaixo) derrubado e descartado inteiro. Tolerância de
+// 10% no gate de PUBLICAÇÃO — decisão do dono.
+describe('REGRESSÃO 02/09/2026: tolerância de 10% no piso de palavras do gate de publicação', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.CRON_SECRET = 'test-secret';
+    claimBlogRunToday.mockResolvedValue('claimed');
+    getNextPlannedEntry.mockResolvedValue({
+      keyword: 'energia solar teste', relatedKeywords: [], competitors: [], attentionPoints: '',
+    });
+    insertRunLog.mockResolvedValue(undefined);
+    saveOutlineStructure.mockResolvedValue(undefined);
+    markPublished.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    delete process.env.CRON_SECRET;
+  });
+
+  async function setupHappyPathMocks() {
+    generateArticleWithSections.mockResolvedValue({
+      title: 'T', slug: 'slug-ok', meta_desc: 'M', image_prompt: 'p', content: 'conteúdo',
+      structure: { sections: [], faq: [] }, bodies: [], sectionImagePrompts: [],
+      cover_alt: null, category: null,
+    });
+    const { runQualityGateLoop } = await import('@/lib/blog/quality-gate');
+    (runQualityGateLoop as ReturnType<typeof vi.fn>).mockImplementation(async (initial: unknown) => ({
+      content: initial,
+      judged: { skipped: true, score: null, issues: [], categories: null },
+      attempts: 0,
+    }));
+    const { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } =
+      await import('@/lib/blog/image-gen');
+    (generateAndUploadCover as ReturnType<typeof vi.fn>).mockResolvedValue('https://x/cover.webp');
+    (generateAndUploadBodyImages as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (generateAndUploadInfographic as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    insertArticle.mockResolvedValue('slug-ok');
+  }
+
+  it('4421 palavras (achado real, 1,8% abaixo de 4500) publica — dentro da tolerância de 10%', async () => {
+    await setupHappyPathMocks();
+    countArticleWords.mockReturnValueOnce(4421);
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(insertArticle).toHaveBeenCalled();
+  });
+
+  it('4050 palavras (exatamente 90% de 4500) publica — fronteira inclusiva', async () => {
+    await setupHappyPathMocks();
+    countArticleWords.mockReturnValueOnce(4050);
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+  });
+
+  it('4049 palavras (1 abaixo da fronteira de 90%) ainda reprova — tolerância não é ilimitada', async () => {
+    await setupHappyPathMocks();
+    countArticleWords.mockReturnValueOnce(4049);
+
+    const { GET } = await import('./route');
+    const request = new NextRequest('https://coesasolar.com.br/api/blog/generate', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe('article_below_4050_words:4049');
+    expect(insertArticle).not.toHaveBeenCalled();
   });
 });
