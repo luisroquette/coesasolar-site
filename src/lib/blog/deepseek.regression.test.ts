@@ -18,6 +18,7 @@ const {
   generateArticle,
   REQUIRED_FIELDS,
   isValidStructure,
+  describeStructureInvalidity,
   parseStructure,
   writeSection,
   generateArticleWithSections,
@@ -264,6 +265,32 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
   });
   it('parseStructure: JSON malformado devolve null (nunca lança)', () => {
     expect(parseStructure('não é json')).toBeNull();
+  });
+
+  // REGRESSÃO 02/09/2026: generateArticleStructure logava só "Estrutura inválida", sem dizer
+  // qual regra falhou nem mostrar o texto bruto — impossível diagnosticar em produção se foi
+  // content vazio (reasoning_content comendo o teto) ou uma violação de formato específica.
+  it('describeStructureInvalidity: estrutura null (JSON.parse falhou) devolve motivo único', () => {
+    expect(describeStructureInvalidity(null, 'placa solar')).toEqual(['json_parse_failed_or_null']);
+  });
+  it('describeStructureInvalidity: estrutura válida não devolve nenhum motivo', () => {
+    expect(describeStructureInvalidity(ESTRUTURA_VALIDA, 'placa solar')).toEqual([]);
+  });
+  it('describeStructureInvalidity: título sem a keyword aponta o motivo exato', () => {
+    expect(describeStructureInvalidity({ ...ESTRUTURA_VALIDA, title: 'Guia genérico' }, 'placa solar')).toContain('title_sem_keyword');
+  });
+  it('describeStructureInvalidity: poucas seções aponta contagem e faixa esperada', () => {
+    const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, sections: ESTRUTURA_VALIDA.sections.slice(0, 3) }, 'placa solar');
+    expect(reasons).toContain('sections_count_3_fora_de_7-9');
+  });
+  it('describeStructureInvalidity: soma de word_target abaixo do piso aponta o total', () => {
+    const sections = ESTRUTURA_VALIDA.sections.map(section => ({ ...section, word_target: 500 }));
+    const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, sections }, 'placa solar');
+    expect(reasons).toContain('soma_word_target_3500_abaixo_de_4500');
+  });
+  it('describeStructureInvalidity: FAQ com contagem errada aponta o número recebido', () => {
+    const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, faq: ESTRUTURA_VALIDA.faq.slice(0, 5) }, 'placa solar');
+    expect(reasons).toContain('faq_count_5_diferente_de_7');
   });
 });
 
