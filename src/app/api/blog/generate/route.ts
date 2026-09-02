@@ -18,7 +18,8 @@ import {
 import { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } from '@/lib/blog/image-gen';
 import { injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
 import { countArticleWords, MIN_ARTICLE_WORDS, validateArticle } from '@/lib/blog/validate';
-import { runQualityGateLoop } from '@/lib/blog/quality-gate';
+import { runQualityGateLoop, type QualityGateResult } from '@/lib/blog/quality-gate';
+import { hasTimeBudget } from '@/lib/blog/time-budget';
 import { scoreInternalLinks } from '@/lib/blog/internal-links';
 import { distributeArticle, buildDistributionArticle } from '@/lib/blog/distribution';
 import { AUTOBLOG_PROFILE } from '@/lib/autoblog-profile';
@@ -47,6 +48,16 @@ export async function GET(request: NextRequest) {
   let keyword: string | undefined;
   const t0 = Date.now();
   const lap = (label: string) => console.warn(`[blog/generate] ${label}: +${Math.round((Date.now() - t0) / 1000)}s`);
+
+  // REGRESSÃO 02/09/2026: a Vercel mata a função (SIGKILL) no maxDuration sem deixar o
+  // catch rodar — insertRunLog nunca é chamado e a linha do claim fica presa em 'running'
+  // pra sempre (só é reclamada pelo cron do dia seguinte, perdendo o dia sem publicar e
+  // sem erro visível). generateAndUploadBodyImages/Infographic/runQualityGateLoop são as
+  // fases opcionais mais caras e vêm DEPOIS da capa — pular cada uma se não sobrar tempo
+  // seguro pro publish (insertArticle+insertRunLog+revalidate) garante que o pipeline
+  // sempre termina bem antes do hard-kill, mesmo em dias com API de imagem/LLM lenta.
+  const PUBLISH_SAFETY_MARGIN_MS = 60_000;
+  const withinBudget = () => hasTimeBudget(Date.now() - t0, maxDuration, PUBLISH_SAFETY_MARGIN_MS);
 
   try {
     // 1. Keyword do dia: pauta do calendário TEM precedência (o dono agenda);
@@ -133,12 +144,24 @@ export async function GET(request: NextRequest) {
     // 3.5 Imagens do corpo: 1 por seção (7-9), alt com keyword (flag imageGenerationEnabled).
     //     generateAndUploadBodyImages preserva posição (null nas falhas) — sectionImages[i]
     //     sempre corresponde à seção i, mesmo se uma imagem no meio da lista falhar.
-    const sectionImages = await generateAndUploadBodyImages(article.sectionImagePrompts, article.slug, kw);
+    let sectionImages: Awaited<ReturnType<typeof generateAndUploadBodyImages>>;
+    if (withinBudget()) {
+      sectionImages = await generateAndUploadBodyImages(article.sectionImagePrompts, article.slug, kw);
+    } else {
+      console.warn('[blog/generate] Pulando imagens de corpo — budget insuficiente antes do hard-kill de 300s');
+      sectionImages = article.sectionImagePrompts.map(() => null);
+    }
     lap('imagens de corpo geradas');
     const finalContent = injectSectionImages(article.content, sectionImages);
 
     // 3.6 Infográfico (flag infographicsEnabled): resumo visual antes do fechamento
-    const infographicUrl = await generateAndUploadInfographic(article.image_prompt, article.slug);
+    let infographicUrl: string | null;
+    if (withinBudget()) {
+      infographicUrl = await generateAndUploadInfographic(article.image_prompt, article.slug);
+    } else {
+      console.warn('[blog/generate] Pulando infográfico — budget insuficiente antes do hard-kill de 300s');
+      infographicUrl = null;
+    }
     lap('infográfico (flag off = instantâneo)');
     const finalContentWithInfographic = injectInfographic(
       finalContent,
@@ -158,22 +181,33 @@ export async function GET(request: NextRequest) {
     //     já gerados — não regenera imagens, só reescreve as seções com issue
     //     (regenerateSectionsWithFeedback, nunca o artigo inteiro numa chamada — mesmo motivo
     //     da Task 2). Publica de qualquer forma ao final, mesmo se o score continuar < 90.
-    const gateResult = await runQualityGateLoop(
-      { article, content: contentWithCtas },
-      ({ article: a, content }) => `# ${a.title}\n\nMeta description: ${a.meta_desc}\n\n${content}`,
-      async ({ article: a }, issues) => {
-        console.warn('[blog/generate] Quality gate abaixo de 90 — regenerando:', issues);
-        const newBodies = await regenerateSectionsWithFeedback(kw, a.structure, a.bodies, issues);
-        const newContent = assembleArticleMarkdown(a.structure, newBodies);
-        const revised = { ...a, bodies: newBodies, content: newContent };
-        const regenBody = injectSectionImages(newContent, sectionImages);
-        const regenWithInfographic = injectInfographic(
-          regenBody,
-          infographicUrl ? { url: infographicUrl, alt: `${kw} — infográfico` } : null,
-        );
-        return { article: revised, content: injectInlineCtas(regenWithInfographic, cta) };
-      },
-    );
+    type GateContent = { article: typeof article; content: string };
+    let gateResult: { content: GateContent; judged: QualityGateResult; attempts: number };
+    if (withinBudget()) {
+      gateResult = await runQualityGateLoop(
+        { article, content: contentWithCtas },
+        ({ article: a, content }) => `# ${a.title}\n\nMeta description: ${a.meta_desc}\n\n${content}`,
+        async ({ article: a }, issues) => {
+          console.warn('[blog/generate] Quality gate abaixo de 90 — regenerando:', issues);
+          const newBodies = await regenerateSectionsWithFeedback(kw, a.structure, a.bodies, issues);
+          const newContent = assembleArticleMarkdown(a.structure, newBodies);
+          const revised = { ...a, bodies: newBodies, content: newContent };
+          const regenBody = injectSectionImages(newContent, sectionImages);
+          const regenWithInfographic = injectInfographic(
+            regenBody,
+            infographicUrl ? { url: infographicUrl, alt: `${kw} — infográfico` } : null,
+          );
+          return { article: revised, content: injectInlineCtas(regenWithInfographic, cta) };
+        },
+      );
+    } else {
+      console.warn('[blog/generate] Pulando quality gate — budget insuficiente antes do hard-kill de 300s');
+      gateResult = {
+        content: { article, content: contentWithCtas },
+        judged: { skipped: true, score: null, issues: [], categories: null },
+        attempts: 0,
+      };
+    }
     article = gateResult.content.article;
     const finalContentWithCtas = gateResult.content.content;
     lap(`gate de qualidade concluído (attempts=${gateResult.attempts}, skipped=${gateResult.judged.skipped})`);
