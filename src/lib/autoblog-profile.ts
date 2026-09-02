@@ -73,7 +73,7 @@ export const AUTOBLOG_PROFILE = {
     successMessage: 'Pronto! Você receberá os próximos guias.',
   },
   integrations: {
-    googleSearchConsoleEnabled: false,
+    googleSearchConsoleEnabled: true, // ligado 02/09/2026 — GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN configurados na Vercel
     imageGenerationEnabled: true,
     // GA4 do site inteiro (layout): o ID oficial da Coesa Solar. Vazio desligaria
     // o gtag global — as métricas próprias (Redis/Upstash, ver src/lib/blog/metrics.ts)
