@@ -21,7 +21,10 @@ export const metadata: Metadata = {
     images: ["https://coesasolar.com.br/og-image.png"],
   },
   verification: {
-    google: "9qbmTBx08hIDy8NvgWnV837CnzUfYsRuiktCP4L_sOE",
+    // 2 códigos: o original (19/08, conta desconhecida) + o novo (02/09, projeto GCP
+    // "coesasolar" dedicado, conta luisroquette@gmail.com) — array mantém as duas
+    // verificações válidas ao mesmo tempo, sem derrubar a anterior.
+    google: ["9qbmTBx08hIDy8NvgWnV837CnzUfYsRuiktCP4L_sOE", "79X7E36KKfbT-F_2dm_rhxKOygvrXaXSkKbCY8f18ZQ"],
   },
 }
 
