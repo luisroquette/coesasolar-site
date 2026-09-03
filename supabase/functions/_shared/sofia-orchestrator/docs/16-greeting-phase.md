@@ -8,8 +8,16 @@ Envia saudação inicial personalizada para novos contatos, com mensagem de boas
 
 - **Número da Fase:** 16
 - **Tipo:** Determinístico
-- **Layer:** Hard Stops
+- **Layer:** Fast-Paths
 - **Prioridade:** Baixa
+
+> **Correção (02/09/2026):** este doc dizia `Layer: Hard Stops`, mas o código não confirma isso.
+> `executeGreetingPhase` é chamado em `sofia-webhook/index.ts:1396`, **depois** dos hard stops
+> reais de LAYER 2 (operator commands `:1003`, global pause `:1046`, lifecycle/manual-mode `:1076`)
+> e **antes** do bloco que o próprio código nomeia `CRITICAL: PRE-LLM HARD STOPS - Phase 85`
+> (`:1626`, regras de negócio: valor mínimo de fatura, bloqueio de re-entrada, bypass de triagem,
+> exigência de e-mail — nada relacionado a greeting). Greeting roda como fast-path determinístico
+> antes do LLM, exatamente como `sofia-webhook/README.md` já descreve em `LAYER 3: FAST-PATHS`.
 
 ## Interface
 

@@ -61,8 +61,11 @@ Webhook principal que recebe mensagens do WhatsApp via Z-API e orquestra toda a 
 ## Dependências
 
 ### Módulos Core
-- `_shared/sofia-orchestrator/` - Fases do orquestrador (operator, triage, data-collection, llm, response)
-- `_shared/pipeline/` - Pipeline v2 (intake, context, reasoning, action, validation, learning)
+- `_shared/sofia-orchestrator/` - Fases do orquestrador legado (operator, triage, data-collection, llm, response)
+- `_shared/pipeline/` - Pipeline v2 (intake, context, reasoning, action, validation, learning). Alternativa ao
+  orquestrador legado, não roda em paralelo com ele: tentado primeiro só para conversas já existentes
+  (`shouldUsePipelineV2` + `conversaId`), com fallback automático pro orquestrador legado se falhar ou não
+  houver conversa. Ambos recebem o mesmo `effectiveMessageText` já processado pelo Message Buffer (LAYER 1).
 - `_shared/lock-helpers.ts` - Locks distribuídos para evitar race conditions
 - `_shared/message-helpers.ts` - Persistência de mensagens
 - `_shared/config-loader.ts` - Configurações centralizadas
@@ -128,6 +131,14 @@ Webhook principal que recebe mensagens do WhatsApp via Z-API e orquestra toda a 
 │ └─ Aggregate multiple messages                                   │
 └─────────────────────────────────────────────────────────────────┘
               │
+              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PIPELINE V2 FORK (só se conversa já existe)                      │
+│ ├─ shouldUsePipelineV2(phone)?                                    │
+│ ├─ Sim + sucesso → executa e RETORNA (pula todo o resto abaixo)  │
+│ └─ Não, ou falhou → fallback pro orquestrador legado (LAYER 2+)  │
+└─────────────────────────────────────────────────────────────────┘
+              │ (fallback / não usou pipeline v2)
               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ LAYER 2: HARD STOPS                                              │
