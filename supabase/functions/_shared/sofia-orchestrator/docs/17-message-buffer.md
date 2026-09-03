@@ -11,6 +11,29 @@ Acumula mensagens rápidas em sequência (phantom enter) e processa como context
 - **Layer:** Fast-Paths
 - **Prioridade:** Baixa
 
+## Relação com Pipeline v2
+
+> **Adicionado 02/09/2026** — relação entre este módulo e `_shared/pipeline/` (Pipeline v2)
+> não estava documentada em lugar nenhum; confirmado lendo `sofia-webhook/index.ts`.
+
+Não são sistemas paralelos independentes — é uma dependência sequencial de mão única:
+
+1. **Message Buffer Phase roda primeiro, sempre**, incondicionalmente, para toda mensagem
+   recebida (`index.ts:742-893`, LAYER 1 do fluxo em `README.md`). Produz `effectiveMessageText`
+   (texto já agregado/mergeado da janela de silêncio).
+2. **Esse `effectiveMessageText` é o input** tanto para o Pipeline v2 (`index.ts:940`) quanto
+   para o fluxo legado (orchestrator phases: operator commands, greeting-phase, hard stops etc.).
+3. Logo depois do buffer (`index.ts:907`), o código decide **qual caminho processa** esse texto:
+   Pipeline v2 é tentado primeiro *apenas se* houver conversa já existente (`if (conversaId)`,
+   `index.ts:928`); se tiver sucesso, retorna direto (`index.ts:966`) e o fluxo legado (greeting,
+   hard stops, LLM reasoning) nunca roda. Se falhar ou não houver conversa existente, cai para o
+   fluxo legado normalmente.
+
+Ou seja: Message Buffer Phase não "compartilha dados" com Pipeline v2 no sentido de troca
+bidirecional — ele é a etapa upstream comum que alimenta a bifurcação Pipeline v2 vs. legado.
+Pipeline v2 e o orquestrador legado (fases 0-18) são alternativas entre si (tentativa + fallback),
+não sistemas paralelos.
+
 ## Interface
 
 ### Context (Entrada)
