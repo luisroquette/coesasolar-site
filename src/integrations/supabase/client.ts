@@ -8,10 +8,25 @@ const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KE
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+function makeClient() {
+  return createClient<Database>(SUPABASE_URL!, SUPABASE_PUBLISHABLE_KEY!, {
+    auth: {
+      storage: typeof window !== 'undefined' ? localStorage : undefined,
+      persistSession: true,
+      autoRefreshToken: true,
+    }
+  });
+}
+
+// CI e o preview da Vercel não têm NEXT_PUBLIC_SUPABASE_* (só existem em Production).
+// Nosso /carreiras arrasta este módulo pro prerender via HomeFooter -> useConfiguracoes,
+// e createClient no escopo do módulo lançava "supabaseUrl is required" só de importar.
+// Proxy adia a criação (e o erro) pro primeiro uso real, nunca pro import.
+export const supabase: ReturnType<typeof makeClient> =
+  SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY
+    ? makeClient()
+    : new Proxy({} as ReturnType<typeof makeClient>, {
+        get() {
+          throw new Error('Supabase envs NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ausentes');
+        },
+      });

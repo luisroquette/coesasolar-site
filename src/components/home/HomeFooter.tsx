@@ -1,3 +1,5 @@
+"use client";
+
 import { Mail, Instagram, Linkedin, Facebook } from "lucide-react";
 import coesaLogoWhite from "@/assets/logos/coesa-white-new.png";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
