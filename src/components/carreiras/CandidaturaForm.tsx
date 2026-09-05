@@ -42,6 +42,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
   const [website, setWebsite] = useState("")
   const [erros, setErros] = useState<string[]>([])
   const [status, setStatus] = useState<Status>("idle")
+  const [erroServidor, setErroServidor] = useState<string | null>(null)
 
   if (status === "sucesso") {
     return (
@@ -71,6 +72,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
       return
     }
     setErros([])
+    setErroServidor(null)
     setStatus("enviando")
     const utm = lerUtmSalvo()
     const formData = montarFormData({ ...campos, linkedin, website }, vagaSlug, utm)
@@ -86,6 +88,8 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
       } else if (res.status === 404) {
         setStatus("encerrada")
       } else {
+        const body = await res.json().catch(() => null)
+        setErroServidor(typeof body?.error === "string" && body.error.trim() ? body.error : null)
         setStatus("erro")
       }
     } catch {
@@ -160,7 +164,9 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
         <p className="text-sm text-red-600">Você já se candidatou a esta vaga.</p>
       )}
       {status === "erro" && (
-        <p className="text-sm text-red-600">Não foi possível enviar sua candidatura agora. Tente novamente em instantes.</p>
+        <p className="text-sm text-red-600">
+          {erroServidor ?? "Não foi possível enviar sua candidatura agora. Tente novamente em instantes."}
+        </p>
       )}
 
       <Button type="submit" disabled={status === "enviando"} className="w-full bg-coesa-green hover:bg-coesa-green/90">
