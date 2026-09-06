@@ -22,6 +22,11 @@
     --coesa-yellow: 45 100% 51%;
     --coesa-gray: 220 13% 46%;
     --coesa-gray-light: 220 14% 96%;
+    --coesa-ink: 162 85% 16%;
+    --coesa-cream: 45 33% 93%;
+    --coesa-lime: 79 54% 51%;
+    --coesa-line: 47 9% 69%;
+    --coesa-text-muted: 148 8% 35%;
 
     /* Core palette - COESA Green as primary */
     --background: 0 0% 100%;
