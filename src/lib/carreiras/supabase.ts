@@ -90,3 +90,23 @@ export async function getVagaBySlug(slug: string): Promise<VagaPublica | null> {
   if (error || !data) return null;
   return normalizeVaga(data);
 }
+
+export interface ConfigRhPublica {
+  email_rh: string;
+  whatsapp_rh: string | null;
+  mensagem_final: string;
+}
+
+export async function getConfigRhPublica(): Promise<ConfigRhPublica | null> {
+  const supabase = getClient();
+  if (!supabase) {
+    console.warn('[carreiras] RH_SUPABASE_URL/RH_SUPABASE_ANON_KEY ausentes — retornando null');
+    return null;
+  }
+  const { data, error } = await supabase
+    .from('rh_config_publico')
+    .select('email_rh, whatsapp_rh, mensagem_final')
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as ConfigRhPublica;
+}

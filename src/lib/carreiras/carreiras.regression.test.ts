@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { normalizeVaga } from "./supabase"
+import { normalizeVaga, getConfigRhPublica } from "./supabase"
 
 describe("REGRESSÃO: normalização de vaga pública", () => {
   it("arrays null viram [] e campos ausentes viram null", () => {
@@ -7,5 +7,17 @@ describe("REGRESSÃO: normalização de vaga pública", () => {
     expect(v.o_que_fara).toEqual([])
     expect(v.beneficios).toEqual([])
     expect(v.area).toBeNull()
+  })
+})
+
+describe("REGRESSÃO: getConfigRhPublica fail-graceful", () => {
+  it("sem env vars, retorna null sem lançar", async () => {
+    const originalUrl = process.env.RH_SUPABASE_URL
+    const originalKey = process.env.RH_SUPABASE_ANON_KEY
+    delete process.env.RH_SUPABASE_URL
+    delete process.env.RH_SUPABASE_ANON_KEY
+    await expect(getConfigRhPublica()).resolves.toBeNull()
+    if (originalUrl) process.env.RH_SUPABASE_URL = originalUrl
+    if (originalKey) process.env.RH_SUPABASE_ANON_KEY = originalKey
   })
 })
