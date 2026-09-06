@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 import { HomeNavbar } from "@/components/home/HomeNavbar"
 import { HomeFooter } from "@/components/home/HomeFooter"
 import { CandidaturaForm } from "@/components/carreiras/CandidaturaForm"
-import { getVagaBySlug } from "@/lib/carreiras/supabase"
+import { getVagaBySlug, getConfigRhPublica } from "@/lib/carreiras/supabase"
+import { montarLinkWhatsapp } from "@/lib/carreiras/form-utils"
 
 export const revalidate = 600
 
@@ -45,7 +46,7 @@ function ListaSemIcone({ titulo, itens }: { titulo: string; itens: string[] }) {
 
 export default async function VagaDetalhePage({ params }: PageProps) {
   const { slug } = await params
-  const vaga = await getVagaBySlug(slug)
+  const [vaga, config] = await Promise.all([getVagaBySlug(slug), getConfigRhPublica()])
   if (!vaga) notFound()
 
   return (
@@ -92,6 +93,42 @@ export default async function VagaDetalhePage({ params }: PageProps) {
                 <li key={item}>{item}</li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {config && (
+          <section className="py-8">
+            <div className="rounded-lg border border-coesa-green/30 bg-coesa-gray-light/40 px-6 py-6">
+              <h2 style={serif} className="text-xl font-semibold text-foreground mb-3">
+                Envie seu currículo para
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={`mailto:${config.email_rh}`}
+                  className="inline-flex items-center rounded-md bg-coesa-green px-4 py-2 text-sm font-medium text-white hover:bg-coesa-green/90"
+                >
+                  {config.email_rh}
+                </a>
+                {config.whatsapp_rh && (
+                  <a
+                    href={montarLinkWhatsapp(config.whatsapp_rh)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-md border border-coesa-green px-4 py-2 text-sm font-medium text-coesa-green hover:bg-coesa-green/10"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {config && (
+          <section className="py-8 text-center">
+            <p style={serif} className="text-lg italic text-foreground/80 leading-relaxed">
+              {config.mensagem_final}
+            </p>
           </section>
         )}
 
