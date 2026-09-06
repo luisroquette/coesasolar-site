@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { validarClient, montarFormData, formatarWhatsapp } from "@/lib/carreiras/form-utils"
+import { validarClient, montarFormData, formatarWhatsapp, preencherSeVazio } from "@/lib/carreiras/form-utils"
 
 const RH_API_BASE = process.env.NEXT_PUBLIC_RH_API_BASE ?? "https://relatorios.coesasolar.com.br"
 
@@ -85,10 +85,10 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
         return
       }
       const dados = await res.json()
-      if (dados.nome && !nome) setNome(dados.nome)
-      if (dados.email && !email) setEmail(dados.email)
-      if (dados.whatsapp && !whatsapp) setWhatsapp(formatarWhatsapp(dados.whatsapp))
-      if (dados.cidade && !cidade) setCidade(dados.cidade)
+      if (dados.nome) setNome((prev) => preencherSeVazio(prev, dados.nome))
+      if (dados.email) setEmail((prev) => preencherSeVazio(prev, dados.email))
+      if (dados.whatsapp) setWhatsapp((prev) => preencherSeVazio(prev, formatarWhatsapp(dados.whatsapp)))
+      if (dados.cidade) setCidade((prev) => preencherSeVazio(prev, dados.cidade))
     } catch {
       setErroExtracao("Não foi possível ler o currículo automaticamente — preencha manualmente.")
     } finally {

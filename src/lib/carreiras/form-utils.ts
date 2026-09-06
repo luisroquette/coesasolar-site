@@ -59,6 +59,17 @@ export function validarClient(campos: CandidaturaCampos): string[] {
   return erros;
 }
 
+/**
+ * Decide o valor final de um campo do form após a extração por IA do CV.
+ * Só usa o valor extraído se o campo estiver vazio NO MOMENTO DA ESCRITA — nunca
+ * sobrescreve o que o candidato já digitou. Deve ser chamada dentro do updater
+ * funcional do setState (`setNome((prev) => preencherSeVazio(prev, dados.nome))`)
+ * para que `atual` reflita o estado mais recente, não o capturado no início do fetch.
+ */
+export function preencherSeVazio(atual: string, extraido: string | undefined): string {
+  return atual || extraido || atual;
+}
+
 /** Normaliza um número BR (com ou sem 55/+55, com ou sem formatação) em link wa.me. */
 export function montarLinkWhatsapp(whatsapp: string): string {
   const digitos = whatsapp.replace(/\D/g, '');
