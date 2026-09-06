@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { validarClient, montarFormData } from "@/lib/carreiras/form-utils"
+import { validarClient, montarFormData, formatarWhatsapp } from "@/lib/carreiras/form-utils"
 
 const RH_API_BASE = process.env.NEXT_PUBLIC_RH_API_BASE ?? "https://relatorios.coesasolar.com.br"
 
@@ -43,6 +43,13 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
   const [erros, setErros] = useState<string[]>([])
   const [status, setStatus] = useState<Status>("idle")
   const [erroServidor, setErroServidor] = useState<string | null>(null)
+  const [portfolioModo, setPortfolioModo] = useState<"nenhum" | "link" | "arquivo">("nenhum")
+  const [portfolioUrl, setPortfolioUrl] = useState("")
+  const [portfolioArquivo, setPortfolioArquivo] = useState<File | null>(null)
+  const [pretensaoSalarial, setPretensaoSalarial] = useState("")
+  const [disponibilidade, setDisponibilidade] = useState("")
+  const [extraindo, setExtraindo] = useState(false)
+  const [erroExtracao, setErroExtracao] = useState<string | null>(null)
 
   if (status === "sucesso") {
     return (
@@ -63,9 +70,39 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
     )
   }
 
+  async function onCvSelecionado(arquivo: File | null) {
+    setCv(arquivo)
+    if (!arquivo) return
+    setExtraindo(true)
+    setErroExtracao(null)
+    try {
+      const fd = new FormData()
+      fd.append("cv", arquivo)
+      const res = await fetch(`${RH_API_BASE}/api/carreiras/extrair-cv`, { method: "POST", body: fd })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        setErroExtracao(typeof body?.error === "string" ? body.error : "Não foi possível ler o currículo automaticamente — preencha manualmente.")
+        return
+      }
+      const dados = await res.json()
+      if (dados.nome && !nome) setNome(dados.nome)
+      if (dados.email && !email) setEmail(dados.email)
+      if (dados.whatsapp && !whatsapp) setWhatsapp(formatarWhatsapp(dados.whatsapp))
+      if (dados.cidade && !cidade) setCidade(dados.cidade)
+    } catch {
+      setErroExtracao("Não foi possível ler o currículo automaticamente — preencha manualmente.")
+    } finally {
+      setExtraindo(false)
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    const campos = { nome, email, whatsapp, cidade, consent, cv }
+    const campos = {
+      nome, email, whatsapp, cidade, consent, cv,
+      portfolioUrl: portfolioModo === "link" ? portfolioUrl : undefined,
+      portfolioArquivo: portfolioModo === "arquivo" ? portfolioArquivo : undefined,
+    }
     const errosValidacao = validarClient(campos)
     if (errosValidacao.length > 0) {
       setErros(errosValidacao)
@@ -75,7 +112,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
     setErroServidor(null)
     setStatus("enviando")
     const utm = lerUtmSalvo()
-    const formData = montarFormData({ ...campos, linkedin, website }, vagaSlug, utm)
+    const formData = montarFormData({ ...campos, linkedin, website, pretensaoSalarial, disponibilidade }, vagaSlug, utm)
     try {
       const res = await fetch(`${RH_API_BASE}/api/carreiras/candidaturas`, {
         method: "POST",
@@ -111,7 +148,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
 
       <div className="space-y-2">
         <Label htmlFor="whatsapp">WhatsApp</Label>
-        <Input id="whatsapp" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(00) 00000-0000" />
+        <Input id="whatsapp" value={whatsapp} onChange={(e) => setWhatsapp(formatarWhatsapp(e.target.value))} placeholder="(00) 00000-0000" />
       </div>
 
       <div className="space-y-2">
@@ -125,13 +162,54 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
       </div>
 
       <div className="space-y-2">
+        <Label>Portfólio (opcional)</Label>
+        <div className="flex gap-2 text-sm">
+          <button type="button" onClick={() => setPortfolioModo(portfolioModo === "link" ? "nenhum" : "link")} className={portfolioModo === "link" ? "underline text-coesa-ink" : "text-coesa-text-muted"}>
+            Link
+          </button>
+          <span className="text-coesa-text-muted">·</span>
+          <button type="button" onClick={() => setPortfolioModo(portfolioModo === "arquivo" ? "nenhum" : "arquivo")} className={portfolioModo === "arquivo" ? "underline text-coesa-ink" : "text-coesa-text-muted"}>
+            Arquivo
+          </button>
+        </div>
+        {portfolioModo === "link" && (
+          <Input value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://..." />
+        )}
+        {portfolioModo === "arquivo" && (
+          <Input type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => setPortfolioArquivo(e.target.files?.[0] ?? null)} />
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="pretensao">Pretensão salarial (opcional)</Label>
+        <Input id="pretensao" value={pretensaoSalarial} onChange={(e) => setPretensaoSalarial(e.target.value)} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="disponibilidade">Disponibilidade (opcional)</Label>
+        <select
+          id="disponibilidade"
+          value={disponibilidade}
+          onChange={(e) => setDisponibilidade(e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">Selecione...</option>
+          <option value="imediata">Imediata</option>
+          <option value="aviso_previo">Aviso prévio</option>
+          <option value="a_combinar">A combinar</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="cv">Currículo (PDF, até 4MB)</Label>
         <Input
           id="cv"
           type="file"
           accept="application/pdf"
-          onChange={(e) => setCv(e.target.files?.[0] ?? null)}
+          onChange={(e) => onCvSelecionado(e.target.files?.[0] ?? null)}
         />
+        {extraindo && <p className="text-xs text-coesa-text-muted">Lendo seu currículo para preencher os campos acima...</p>}
+        {erroExtracao && <p className="text-xs text-coesa-text-muted">{erroExtracao}</p>}
       </div>
 
       {/* honeypot anti-spam — invisível para humanos */}
