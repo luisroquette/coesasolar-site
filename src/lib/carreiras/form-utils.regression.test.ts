@@ -20,6 +20,9 @@ describe("REGRESSÃO: montarLinkWhatsapp", () => {
   it("número já com 55 não duplica", () => {
     expect(montarLinkWhatsapp("5531999998888")).toBe("https://wa.me/5531999998888")
   })
+  it("DDD 55 sem código do país (11 dígitos) antepõe 55 do país", () => {
+    expect(montarLinkWhatsapp("55991234567")).toBe("https://wa.me/5555991234567")
+  })
   it("número formatado normaliza e funciona igual", () => {
     expect(montarLinkWhatsapp("(31) 99999-8888")).toBe("https://wa.me/5531999998888")
   })

@@ -40,7 +40,7 @@ export function validarClient(campos: CandidaturaCampos): string[] {
 /** Normaliza um número BR (com ou sem 55/+55, com ou sem formatação) em link wa.me. */
 export function montarLinkWhatsapp(whatsapp: string): string {
   const digitos = whatsapp.replace(/\D/g, '');
-  const comPais = digitos.startsWith('55') ? digitos : `55${digitos}`;
+  const comPais = digitos.startsWith('55') && digitos.length >= 12 ? digitos : `55${digitos}`;
   return `https://wa.me/${comPais}`;
 }
 
