@@ -8,6 +8,9 @@ const MARCAS: Record<string, string> = {
   wellhub: 'wellhub.com',
   gympass: 'wellhub.com', // nome antigo do Wellhub
   uber: 'uber.com',
+  instagram: 'instagram.com',
+  tiktok: 'tiktok.com',
+  linkedin: 'linkedin.com',
 };
 
 /** Devolve a URL da logo se o texto do benefício citar uma marca conhecida; null senão. */

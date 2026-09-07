@@ -75,9 +75,9 @@ export default async function VagaDetalhePage({ params }: PageProps) {
           </p>
         )}
 
-        <ListaSemIcone titulo="O que você fará" itens={vaga.o_que_fara} />
-        <ListaSemIcone titulo="O que buscamos" itens={vaga.o_que_buscamos} />
-        <ListaSemIcone titulo="Diferenciais" itens={vaga.diferenciais} />
+        <ListaSemIcone titulo="💻 O que você fará" itens={vaga.o_que_fara} />
+        <ListaSemIcone titulo="🔍 O que buscamos" itens={vaga.o_que_buscamos} />
+        <ListaSemIcone titulo="⭐ Diferenciais" itens={vaga.diferenciais} />
 
         {vaga.observacoes && (
           <section className="py-8">
@@ -88,7 +88,7 @@ export default async function VagaDetalhePage({ params }: PageProps) {
         {(vaga.remuneracao || vaga.comissionamento || vaga.beneficios.length > 0) && (
           <section className="py-8">
             <h2 style={serif} className="text-2xl font-semibold text-foreground mb-4">
-              Remuneração e benefícios
+              💰 Remuneração e benefícios
             </h2>
             <ul className="space-y-2 text-foreground">
               {vaga.remuneracao && <li>{vaga.remuneracao}</li>}

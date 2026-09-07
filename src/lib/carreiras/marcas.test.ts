@@ -13,4 +13,10 @@ describe('REGRESSÃO: logo de marca em benefícios', () => {
     expect(logoDeMarca('Vale-refeição')).toBeNull();
     expect(logoDeMarca('Auxílio CNH')).toBeNull();
   });
+
+  it('reconhece instagram, tiktok e linkedin', () => {
+    expect(logoDeMarca('Instagram')).toBe('https://img.logo.dev/instagram.com?token=pk_A3_K-y1HSoORzn7QksCwNA&size=80&format=png');
+    expect(logoDeMarca('TikTok')).toBe('https://img.logo.dev/tiktok.com?token=pk_A3_K-y1HSoORzn7QksCwNA&size=80&format=png');
+    expect(logoDeMarca('LinkedIn')).toBe('https://img.logo.dev/linkedin.com?token=pk_A3_K-y1HSoORzn7QksCwNA&size=80&format=png');
+  });
 });
