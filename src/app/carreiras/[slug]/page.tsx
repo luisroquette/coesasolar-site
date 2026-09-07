@@ -146,7 +146,7 @@ export default async function VagaDetalhePage({ params }: PageProps) {
           <h2 style={serif} className="text-2xl font-semibold text-foreground mb-6">
             Candidate-se
           </h2>
-          <CandidaturaForm vagaSlug={vaga.slug} feedbackDias={vaga.feedback_dias} />
+          <CandidaturaForm vagaSlug={vaga.slug} feedbackDias={vaga.feedback_dias} camposExtras={vaga.campos} />
         </section>
       </article>
 

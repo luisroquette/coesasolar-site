@@ -9,6 +9,14 @@ const COLUMNS =
   'slug, titulo, area, regime, modalidade, local, remuneracao, comissionamento, pitch, ' +
   'o_que_fara, o_que_buscamos, diferenciais, beneficios, observacoes, feedback_dias, publicado_em';
 
+export interface CampoExtraPublico {
+  id: string;
+  tipo: 'texto_curto' | 'texto_longo' | 'selecao' | 'sim_nao' | 'anexo';
+  label: string;
+  obrigatorio: boolean;
+  opcoes: string[];
+}
+
 export interface VagaPublica {
   slug: string;
   titulo: string;
@@ -26,6 +34,7 @@ export interface VagaPublica {
   observacoes: string | null;
   feedback_dias: number;
   publicado_em: string | null;
+  campos: CampoExtraPublico[];
 }
 
 /** Converte jsonb (pode vir null) em array e preenche `undefined` como null. */
@@ -49,6 +58,11 @@ export function normalizeVaga(row: unknown): VagaPublica {
     observacoes: (r.observacoes as string | null) ?? null,
     feedback_dias: (r.feedback_dias as number) ?? 0,
     publicado_em: (r.publicado_em as string | null) ?? null,
+    campos: Array.isArray((r as any).rh_vaga_campos)
+      ? (r as any).rh_vaga_campos.map((c: any) => ({
+          id: c.id, tipo: c.tipo, label: c.label, obrigatorio: c.obrigatorio, opcoes: Array.isArray(c.opcoes) ? c.opcoes : [],
+        }))
+      : [],
   };
 }
 
@@ -84,7 +98,7 @@ export async function getVagaBySlug(slug: string): Promise<VagaPublica | null> {
   }
   const { data, error } = await supabase
     .from(TABLE)
-    .select(COLUMNS)
+    .select(`${COLUMNS}, rh_vaga_campos(id, tipo, label, obrigatorio, opcoes)`)
     .eq('slug', slug)
     .maybeSingle();
   if (error || !data) return null;

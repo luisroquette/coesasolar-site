@@ -2,6 +2,14 @@
 
 const CV_MAX_BYTES = 4 * 1024 * 1024; // 4MB (cap de body Vercel no painel é 4,5MB)
 
+export interface CampoExtraForm {
+  id: string;
+  tipo: 'texto_curto' | 'texto_longo' | 'selecao' | 'sim_nao' | 'anexo';
+  label: string;
+  obrigatorio: boolean;
+  opcoes: string[];
+}
+
 export interface CandidaturaCampos {
   nome: string;
   email: string;
@@ -11,6 +19,8 @@ export interface CandidaturaCampos {
   cv: File | null;
   portfolioUrl?: string;
   portfolioArquivo?: File | null;
+  camposExtras?: CampoExtraForm[];
+  respostasExtras?: Record<string, string>;
 }
 
 export function coletarUtm(searchParams: URLSearchParams): Record<string, string> {
@@ -56,6 +66,11 @@ export function validarClient(campos: CandidaturaCampos): string[] {
       erros.push('Currículo + portfólio juntos passam do limite — envie o portfólio como link.');
     }
   }
+  for (const campo of campos.camposExtras ?? []) {
+    if (campo.obrigatorio && campo.tipo !== 'anexo' && !(campos.respostasExtras?.[campo.id] ?? '').trim()) {
+      erros.push(`Informe: ${campo.label}.`);
+    }
+  }
   return erros;
 }
 
@@ -86,6 +101,7 @@ export function montarFormData(
   },
   vagaSlug: string,
   utm: Record<string, string>,
+  extras?: { respostasExtras?: Record<string, string>; arquivosExtras?: Record<string, File | null> },
 ): FormData {
   const fd = new FormData();
   fd.append('vaga_slug', vagaSlug);
@@ -102,5 +118,13 @@ export function montarFormData(
   if (campos.portfolioArquivo) fd.append('portfolio', campos.portfolioArquivo);
   if (campos.pretensaoSalarial) fd.append('pretensao_salarial', campos.pretensaoSalarial);
   if (campos.disponibilidade) fd.append('disponibilidade', campos.disponibilidade);
+  if (extras?.respostasExtras && Object.keys(extras.respostasExtras).length > 0) {
+    fd.append('respostas_extras', JSON.stringify(extras.respostasExtras));
+  }
+  if (extras?.arquivosExtras) {
+    for (const [campoId, arquivo] of Object.entries(extras.arquivosExtras)) {
+      if (arquivo) fd.append(`resposta_arquivo_${campoId}`, arquivo);
+    }
+  }
   return fd;
 }

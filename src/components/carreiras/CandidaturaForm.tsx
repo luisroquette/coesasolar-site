@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { validarClient, montarFormData, formatarWhatsapp, preencherSeVazio } from "@/lib/carreiras/form-utils"
+import { Textarea } from "@/components/ui/textarea"
+import { validarClient, montarFormData, formatarWhatsapp, preencherSeVazio, type CampoExtraForm } from "@/lib/carreiras/form-utils"
 
 const RH_API_BASE = process.env.NEXT_PUBLIC_RH_API_BASE ?? "https://relatorios.coesasolar.com.br"
 
@@ -25,13 +26,14 @@ function dataFeedback(dias: number): string {
 }
 
 interface CandidaturaFormProps {
-  vagaSlug: string
-  feedbackDias: number
+  vagaSlug?: string
+  feedbackDias?: number
+  camposExtras?: CampoExtraForm[]
 }
 
 type Status = "idle" | "enviando" | "sucesso" | "ja_candidatou" | "encerrada" | "erro"
 
-export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps) {
+export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [] }: CandidaturaFormProps) {
   const [nome, setNome] = useState("")
   const [email, setEmail] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
@@ -50,11 +52,15 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
   const [disponibilidade, setDisponibilidade] = useState("")
   const [extraindo, setExtraindo] = useState(false)
   const [erroExtracao, setErroExtracao] = useState<string | null>(null)
+  const [respostasExtras, setRespostasExtras] = useState<Record<string, string>>({})
+  const [arquivosExtras, setArquivosExtras] = useState<Record<string, File | null>>({})
 
   if (status === "sucesso") {
     return (
       <p className="text-center text-foreground">
-        Candidatura recebida! Você receberá nosso feedback até {dataFeedback(feedbackDias)} — enviaremos o resultado, seja ele qual for.
+        {feedbackDias
+          ? `Candidatura recebida! Você receberá nosso feedback até ${dataFeedback(feedbackDias)} — enviaremos o resultado, seja ele qual for.`
+          : "Currículo recebido! Você entra no nosso banco de talentos — entraremos em contato assim que surgir uma vaga com o seu perfil."}
       </p>
     )
   }
@@ -103,7 +109,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
       portfolioUrl: portfolioModo === "link" ? portfolioUrl : undefined,
       portfolioArquivo: portfolioModo === "arquivo" ? portfolioArquivo : undefined,
     }
-    const errosValidacao = validarClient(campos)
+    const errosValidacao = validarClient({ ...campos, camposExtras, respostasExtras })
     if (errosValidacao.length > 0) {
       setErros(errosValidacao)
       return
@@ -112,7 +118,12 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
     setErroServidor(null)
     setStatus("enviando")
     const utm = lerUtmSalvo()
-    const formData = montarFormData({ ...campos, linkedin, website, pretensaoSalarial, disponibilidade }, vagaSlug, utm)
+    const formData = montarFormData(
+      { ...campos, linkedin, website, pretensaoSalarial, disponibilidade },
+      vagaSlug ?? "",
+      utm,
+      { respostasExtras, arquivosExtras },
+    )
     try {
       const res = await fetch(`${RH_API_BASE}/api/carreiras/candidaturas`, {
         method: "POST",
@@ -211,6 +222,44 @@ export function CandidaturaForm({ vagaSlug, feedbackDias }: CandidaturaFormProps
         {extraindo && <p className="text-xs text-coesa-text-muted">Lendo seu currículo para preencher os campos acima...</p>}
         {erroExtracao && <p className="text-xs text-coesa-text-muted">{erroExtracao}</p>}
       </div>
+
+      {camposExtras.map((campo) => (
+        <div key={campo.id} className="space-y-2">
+          <Label htmlFor={`campo-${campo.id}`}>{campo.label}{campo.obrigatorio ? " *" : " (opcional)"}</Label>
+          {campo.tipo === "texto_curto" && (
+            <Input id={`campo-${campo.id}`} value={respostasExtras[campo.id] ?? ""} onChange={(e) => setRespostasExtras({ ...respostasExtras, [campo.id]: e.target.value })} />
+          )}
+          {campo.tipo === "texto_longo" && (
+            <Textarea id={`campo-${campo.id}`} value={respostasExtras[campo.id] ?? ""} onChange={(e) => setRespostasExtras({ ...respostasExtras, [campo.id]: e.target.value })} />
+          )}
+          {campo.tipo === "selecao" && (
+            <select
+              id={`campo-${campo.id}`}
+              value={respostasExtras[campo.id] ?? ""}
+              onChange={(e) => setRespostasExtras({ ...respostasExtras, [campo.id]: e.target.value })}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Selecione...</option>
+              {campo.opcoes.map((op) => <option key={op} value={op}>{op}</option>)}
+            </select>
+          )}
+          {campo.tipo === "sim_nao" && (
+            <select
+              id={`campo-${campo.id}`}
+              value={respostasExtras[campo.id] ?? ""}
+              onChange={(e) => setRespostasExtras({ ...respostasExtras, [campo.id]: e.target.value })}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Selecione...</option>
+              <option value="Sim">Sim</option>
+              <option value="Não">Não</option>
+            </select>
+          )}
+          {campo.tipo === "anexo" && (
+            <Input id={`campo-${campo.id}`} type="file" onChange={(e) => setArquivosExtras({ ...arquivosExtras, [campo.id]: e.target.files?.[0] ?? null })} />
+          )}
+        </div>
+      ))}
 
       {/* honeypot anti-spam — invisível para humanos */}
       <input
