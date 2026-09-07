@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { coletarUtm, validarClient, montarLinkWhatsapp, formatarWhatsapp, preencherSeVazio } from "./form-utils"
+import { coletarUtm, validarClient, montarLinkWhatsapp, formatarWhatsapp, preencherSeVazio, montarFormData } from "./form-utils"
 
 describe("REGRESSÃO: form de candidatura", () => {
   it("coleta só utm_*", () => {
@@ -46,6 +46,27 @@ describe("REGRESSÃO: máscara de WhatsApp e portfólio (Fase 2)", () => {
     expect(erros.length).toBeGreaterThan(0)
   })
 })
+
+describe("REGRESSÃO: respostas de campos extras no form (Fase 3a)", () => {
+  it("montarFormData inclui respostas_extras como JSON e arquivos com prefixo resposta_", () => {
+    const arquivo = new File([new Uint8Array(5)], "anexo.pdf", { type: "application/pdf" });
+    const fd = montarFormData(
+      { nome: "Ana", email: "a@b.co", whatsapp: "31999998888", cidade: "BH", consent: true, cv: null, website: "" },
+      "vaga-x",
+      {},
+      { respostasExtras: { "campo-1": "5 anos" }, arquivosExtras: { "campo-2": arquivo } },
+    );
+    expect(JSON.parse(fd.get("respostas_extras") as string)).toEqual({ "campo-1": "5 anos" });
+    expect(fd.get("resposta_arquivo_campo-2")).toBe(arquivo);
+  });
+
+  it("validarClient rejeita campo extra obrigatório vazio", () => {
+    const campos = [{ id: "campo-1", tipo: "texto_curto" as const, label: "Anos de experiência", obrigatorio: true, opcoes: [] }];
+    const base = { nome: "Ana", email: "a@b.co", whatsapp: "31999998888", cidade: "BH", consent: true, cv: new File([new Uint8Array(1)], "cv.pdf", { type: "application/pdf" }) };
+    const erros = validarClient({ ...base, camposExtras: campos, respostasExtras: {} });
+    expect(erros).toContain("Informe: Anos de experiência.");
+  });
+});
 
 describe("REGRESSÃO: autopreenchimento por IA não sobrescreve campo já preenchido (race da extração de CV)", () => {
   it("campo vazio recebe o valor extraído", () => {
