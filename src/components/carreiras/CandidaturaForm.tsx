@@ -26,8 +26,8 @@ function dataFeedback(dias: number): string {
 }
 
 interface CandidaturaFormProps {
-  vagaSlug: string
-  feedbackDias: number
+  vagaSlug?: string
+  feedbackDias?: number
   camposExtras?: CampoExtraForm[]
 }
 
@@ -58,7 +58,9 @@ export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [] }: C
   if (status === "sucesso") {
     return (
       <p className="text-center text-foreground">
-        Candidatura recebida! Você receberá nosso feedback até {dataFeedback(feedbackDias)} — enviaremos o resultado, seja ele qual for.
+        {feedbackDias
+          ? `Candidatura recebida! Você receberá nosso feedback até ${dataFeedback(feedbackDias)} — enviaremos o resultado, seja ele qual for.`
+          : "Currículo recebido! Você entra no nosso banco de talentos — entraremos em contato assim que surgir uma vaga com o seu perfil."}
       </p>
     )
   }
@@ -118,7 +120,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [] }: C
     const utm = lerUtmSalvo()
     const formData = montarFormData(
       { ...campos, linkedin, website, pretensaoSalarial, disponibilidade },
-      vagaSlug,
+      vagaSlug ?? "",
       utm,
       { respostasExtras, arquivosExtras },
     )
