@@ -84,6 +84,11 @@ export default {
           yellow: "hsl(var(--coesa-yellow))",
           gray: "hsl(var(--coesa-gray))",
           "gray-light": "hsl(var(--coesa-gray-light))",
+          ink: "hsl(var(--coesa-ink))",
+          cream: "hsl(var(--coesa-cream))",
+          lime: "hsl(var(--coesa-lime))",
+          line: "hsl(var(--coesa-line))",
+          "text-muted": "hsl(var(--coesa-text-muted))",
         },
         chart: {
           "1": "hsl(var(--chart-1))",

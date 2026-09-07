@@ -5,6 +5,7 @@ import { HomeFooter } from "@/components/home/HomeFooter"
 import { CandidaturaForm } from "@/components/carreiras/CandidaturaForm"
 import { getVagaBySlug, getConfigRhPublica } from "@/lib/carreiras/supabase"
 import { montarLinkWhatsapp } from "@/lib/carreiras/form-utils"
+import { logoDeMarca } from "@/lib/carreiras/marcas"
 
 export const revalidate = 600
 
@@ -55,6 +56,9 @@ export default async function VagaDetalhePage({ params }: PageProps) {
 
       <section className="bg-coesa-green pt-32 pb-16 px-4">
         <div className="container max-w-3xl mx-auto text-center">
+          <p className="text-xs uppercase tracking-widest text-white/70 mb-3">
+            Oportunidade profissional
+          </p>
           <h1 style={serif} className="text-3xl md:text-5xl font-bold text-white leading-tight">
             {vaga.titulo}
           </h1>
@@ -89,9 +93,15 @@ export default async function VagaDetalhePage({ params }: PageProps) {
             <ul className="space-y-2 text-foreground">
               {vaga.remuneracao && <li>{vaga.remuneracao}</li>}
               {vaga.comissionamento && <li>{vaga.comissionamento}</li>}
-              {vaga.beneficios.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
+              {vaga.beneficios.map((item) => {
+                const logo = logoDeMarca(item)
+                return (
+                  <li key={item} className="flex items-center gap-2">
+                    {logo && <img src={logo} alt="" className="h-5 w-5 object-contain" />}
+                    <span>{item}</span>
+                  </li>
+                )
+              })}
             </ul>
           </section>
         )}
