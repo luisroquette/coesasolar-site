@@ -754,3 +754,55 @@ describe('REGRESSÃO 02/09/2026: generateArticleStructure troca de modelo na 3ª
     expect(createMock).toHaveBeenCalledTimes(3);
   });
 });
+
+// REGRESSÃO 08/09/2026 (E2E real em produção — causa raiz de pipeline_deadline_exceeded):
+// generateArticleStructure roda até 3 tentativas de até 150s cada sem NENHUMA noção do
+// orçamento do pipeline. Log real: tentativa 1 completou em 60s com estrutura inválida
+// (4 seções em vez de 7-9), a tentativa 2 começou e o deadline de 270s do pipeline
+// estourou por dentro dela. hasBudget interrompe o loop ANTES de uma tentativa que não
+// teria tempo de terminar, trocando "estoura o deadline sem diagnóstico" por
+// "deepseek_structure_failed" rápido (já tratado pelo caller).
+describe('REGRESSÃO 08/09/2026: generateArticleStructure para de tentar quando o orçamento acaba', () => {
+  const invalida = {
+    title: 'Guia genérico sem a keyword',
+    page_title: 'x', slug: 'x', meta_desc: 'x', cover_image_prompt: 'x', cover_alt: 'x', category: 'faq',
+    sections: [{ h2: 'Só uma seção', content_brief: 'brief', word_target: 350, image_prompt: 'p' }],
+    faq: [{ question: 'Pergunta?', answer: 'Resposta.' }],
+    summary_bullets: ['Bullet 1'],
+  };
+
+  it('orçamento já esgotado antes da 1ª tentativa: nem chama a API, lança deepseek_structure_failed', async () => {
+    const hasBudget = () => false;
+
+    await expect(generateArticleStructure('placa solar', [], null, hasBudget)).rejects.toThrow('deepseek_structure_failed');
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('orçamento acaba entre a 1ª e a 2ª tentativa: para em 1 chamada em vez de esgotar as 3', async () => {
+    let budgetOk = true;
+    const hasBudget = () => budgetOk;
+    createMock.mockImplementationOnce(async () => {
+      budgetOk = false; // esgota o orçamento durante a 1ª chamada, como no incidente real
+      return { choices: [{ message: { content: JSON.stringify(invalida) } }] };
+    });
+
+    await expect(generateArticleStructure('placa solar', [], null, hasBudget)).rejects.toThrow('deepseek_structure_failed');
+    expect(createMock).toHaveBeenCalledTimes(1); // nunca chega na 2ª/3ª tentativa sem orçamento
+  });
+
+  it('caso positivo: orçamento sempre disponível, comportamento idêntico ao default (sem hasBudget)', async () => {
+    const valida = {
+      title: 'Placa Solar: Guia Completo 2026', page_title: 'x', slug: 'x', meta_desc: 'x',
+      cover_image_prompt: 'x', cover_alt: 'x', category: 'faq',
+      sections: Array.from({ length: 7 }, (_, i) => ({ h2: `Seção ${i + 1}`, content_brief: 'brief', word_target: 650, image_prompt: 'p' })),
+      faq: Array.from({ length: 7 }, (_, i) => ({ question: `Pergunta ${i + 1}?`, answer: 'Resposta.' })),
+      summary_bullets: ['Bullet 1', 'Bullet 2', 'Bullet 3'],
+    };
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    const result = await generateArticleStructure('placa solar', [], null, () => true);
+
+    expect(result.title).toBe('Placa Solar: Guia Completo 2026');
+    expect(createMock).toHaveBeenCalledTimes(1);
+  });
+});
