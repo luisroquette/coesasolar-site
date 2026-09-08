@@ -89,6 +89,15 @@ export async function GET(request: NextRequest) {
   const PUBLISH_SAFETY_MARGIN_MS = 60_000;
   const withinBudget = () => hasTimeBudget(Date.now() - t0, maxDuration, PUBLISH_SAFETY_MARGIN_MS);
 
+  // REGRESSÃO 08/09/2026 (E2E real, causa raiz confirmada em produção): a estrutura
+  // (generateArticleStructure) roda até 3 tentativas de até 150s cada SEM nenhuma noção do
+  // orçamento do pipeline — log real mostrou tentativa 1 (60s, estrutura inválida) seguida
+  // da tentativa 2 estourando o deadline de 270s por dentro. 120s de margem (o dobro do
+  // PUBLISH_SAFETY_MARGIN_MS acima) porque depois da estrutura ainda faltam seções +
+  // capa + insertArticle — não só o encerramento gracioso das fases opcionais.
+  const STRUCTURE_SAFETY_MARGIN_MS = 120_000;
+  const hasStructureBudget = () => hasTimeBudget(Date.now() - t0, maxDuration, STRUCTURE_SAFETY_MARGIN_MS);
+
   const runPipeline = async (): Promise<NextResponse> => {
     // 0. Circuit breaker de saldo (02/09/2026): a conta OpenRouter compartilhada já zerou
     //    uma vez — checar ANTES de queimar tokens numa geração fadada a 402 no meio.
@@ -157,7 +166,7 @@ export async function GET(request: NextRequest) {
         allowedCategories: AUTOBLOG_PROFILE.editorial.categories.map(c => c.slug),
       });
 
-    let article = await generateArticleWithSections(kw, internalLinks, brief);
+    let article = await generateArticleWithSections(kw, internalLinks, brief, hasStructureBudget);
     lap('estrutura+seções geradas');
     // Guarda a estrutura aprovada na pauta do calendário (no-op se a keyword veio do seed)
     await saveOutlineStructure(kw, JSON.stringify(article.structure)).catch(() => {});
