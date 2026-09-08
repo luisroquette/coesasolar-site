@@ -15,8 +15,15 @@ export async function checkOpenRouterBalance(): Promise<BalanceCheck> {
   const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) return { ok: true, remaining: null }; // sem chave configurada não é problema deste breaker
 
+  // REGRESSÃO 08/09/2026: mesmo padrão do fix em image-gen.ts — checagem roda ANTES de
+  // qualquer guard de budget (passo 0 do pipeline) e nunca teve timeout; já é fail-open no
+  // catch, então um timeout aqui só torna o "fail-open" determinístico em vez de depender de
+  // o provedor eventualmente responder.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const response = await fetch('https://openrouter.ai/api/v1/credits', {
+      signal: controller.signal,
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!response.ok) {
@@ -35,5 +42,7 @@ export async function checkOpenRouterBalance(): Promise<BalanceCheck> {
   } catch (err) {
     console.warn('[openrouter-budget] Falha ao checar saldo (fail-open, não bloqueia):', err);
     return { ok: true, remaining: null };
+  } finally {
+    clearTimeout(timer);
   }
 }

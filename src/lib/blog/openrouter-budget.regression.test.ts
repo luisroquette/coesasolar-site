@@ -74,3 +74,43 @@ describe('REGRESSÃO 02/09/2026: checkOpenRouterBalance', () => {
     await expect(checkOpenRouterBalance()).resolves.toEqual({ ok: true, remaining: null });
   });
 });
+
+// REGRESSÃO 08/09/2026: causa raiz de pipeline_deadline_exceeded recorrente (09-03, 09-04,
+// 09-07, 09-08) — checkOpenRouterBalance é o PRIMEIRO passo do pipeline (route.ts) e nunca
+// teve timeout no fetch; uma resposta travada da API consumia o orçamento inteiro do
+// deadline interno (270s) sozinha, antes de qualquer outra fase rodar. Fail-open já existia
+// para erro de rede — faltava cobrir "nunca responde" (nem resolve nem rejeita).
+describe('REGRESSÃO 08/09/2026: checkOpenRouterBalance nunca trava indefinidamente', () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    globalThis.fetch = vi.fn();
+    process.env.COESASOLAR_OPENROUTER_API_KEY = 'sk-test';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.COESASOLAR_OPENROUTER_API_KEY;
+    else process.env.COESASOLAR_OPENROUTER_API_KEY = originalKey;
+  });
+
+  it('fetch travado pra sempre: aborta em 10s e resolve fail-open, nunca fica pendente', async () => {
+    // Simula o comportamento real do fetch com AbortSignal: a promise só rejeita quando o
+    // signal aborta (nunca resolve/rejeita sozinha) — replica exatamente o cenário de rede
+    // travada que causava o pipeline_deadline_exceeded.
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((_url: string, options: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      });
+    });
+
+    const resultPromise = checkOpenRouterBalance();
+    await vi.advanceTimersByTimeAsync(10_000);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ ok: true, remaining: null });
+  });
+});
