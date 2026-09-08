@@ -6,6 +6,7 @@ import { CandidaturaForm } from "@/components/carreiras/CandidaturaForm"
 import { getVagaBySlug, getConfigRhPublica } from "@/lib/carreiras/supabase"
 import { montarLinkWhatsapp } from "@/lib/carreiras/form-utils"
 import { logoDeMarca } from "@/lib/carreiras/marcas"
+import { Badge } from "@/components/ui/badge"
 
 export const revalidate = 600
 
@@ -62,8 +63,11 @@ export default async function VagaDetalhePage({ params }: PageProps) {
           <h1 style={serif} className="text-3xl md:text-5xl font-bold text-white leading-tight">
             {vaga.titulo}
           </h1>
+          {vaga.modalidade && (
+            <Badge className="mt-4 border-transparent bg-white text-coesa-green text-sm px-3 py-1">{vaga.modalidade}</Badge>
+          )}
           <p className="mt-3 text-xs uppercase tracking-wider text-white/80">
-            {[vaga.area, vaga.regime, vaga.modalidade, vaga.local].filter(Boolean).join(" · ")}
+            {[vaga.area, vaga.regime, vaga.local].filter(Boolean).join(" · ")}
           </p>
         </div>
       </section>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { HomeNavbar } from '@/components/home/HomeNavbar';
 import { HomeFooter } from '@/components/home/HomeFooter';
 import { getVagasPublicadas } from '@/lib/carreiras/supabase';
+import { Badge } from '@/components/ui/badge';
 
 export const revalidate = 600;
 
@@ -70,8 +71,11 @@ export default async function CarreirasPage() {
                         {vaga.titulo}
                       </h3>
                       <div className="mt-2 h-px w-12 bg-coesa-ink" />
+                      {vaga.modalidade && (
+                        <Badge className="mt-2 border-transparent bg-coesa-green/10 text-coesa-green">{vaga.modalidade}</Badge>
+                      )}
                       <p className="mt-3 text-xs uppercase tracking-wider text-coesa-text-muted flex flex-wrap items-center gap-2">
-                        {[vaga.regime, vaga.modalidade, vaga.local].filter(Boolean).join(' · ')}
+                        {[vaga.regime, vaga.local].filter(Boolean).join(' · ')}
                         <span className="text-coesa-ink group-hover:translate-x-1 transition-transform">→</span>
                       </p>
                     </Link>
