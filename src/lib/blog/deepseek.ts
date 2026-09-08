@@ -218,7 +218,7 @@ export function normalizeKeywordText(s: string): string {
   return s
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -325,9 +325,25 @@ export async function generateArticleStructure(
   keyword: string,
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
+  // REGRESSÃO 08/09/2026 (E2E real em produção, confirma a causa raiz real de
+  // pipeline_deadline_exceeded): logs de produção mostraram a tentativa 1 completando em
+  // 60s com estrutura INVÁLIDA (4 seções em vez de 7-9), a tentativa 2 iniciando, e o
+  // deadline do pipeline (270s) estourando ainda dentro dela — sem ESTE guard, o loop
+  // sempre roda as 3 tentativas (até 150s cada, ver askDeepseek) sem nenhuma noção do
+  // orçamento do pipeline, podendo consumir até ~450s sozinho. hasBudget (opcional,
+  // default sempre-true preserva o comportamento de generateArticleOutline/
+  // regenerateWithFeedback e dos testes existentes) interrompe o loop ANTES de uma
+  // tentativa que não teria tempo de terminar + deixar orçamento pro resto do pipeline
+  // (seções, capa, insert) — troca "estourar o deadline sem diagnóstico" por
+  // "deepseek_structure_failed" rápido e já tratado.
+  hasBudget: () => boolean = () => true,
 ): Promise<ArticleStructure> {
   const maxAttempts = STRUCTURE_MODELS_BY_ATTEMPT.length;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (!hasBudget()) {
+      console.warn(`[deepseek] Sem orçamento de tempo pra tentativa ${attempt} de estrutura — abortando retries em vez de arriscar estourar o deadline do pipeline.`);
+      break;
+    }
     const tAttempt = Date.now();
     const model = STRUCTURE_MODELS_BY_ATTEMPT[attempt - 1];
     // REGRESSÃO 26/08/2026: a 2ª tentativa repetia o MESMO prompt e, quando o defeito
@@ -501,9 +517,10 @@ export async function generateArticleWithSections(
   keyword: string,
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
+  hasStructureBudget?: () => boolean,
 ): Promise<ArticleContent & { sectionImagePrompts: string[]; structure: ArticleStructure; bodies: string[] }> {
   const tStructure = Date.now();
-  const rawStructure = await generateArticleStructure(keyword, internalLinks, brief);
+  const rawStructure = await generateArticleStructure(keyword, internalLinks, brief, hasStructureBudget);
   console.warn(`[deepseek] estrutura total (com retries) levou ${Math.round((Date.now() - tStructure) / 1000)}s, ${rawStructure.sections.length} seções`);
   const structure: ArticleStructure = {
     ...rawStructure,
