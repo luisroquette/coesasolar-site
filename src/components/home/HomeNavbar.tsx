@@ -12,6 +12,7 @@ const navLinks = [
   { href: "#planos", label: "Planos" },
   { href: "#como-funciona", label: "Como Funciona" },
   { href: "/blog", label: "Blog" },
+  { href: "/carreiras", label: "Carreiras" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -58,7 +59,7 @@ export function HomeNavbar() {
               <Button onClick={scrollToForm} size="sm" className="bg-white text-black hover:bg-white/90 font-medium px-6 rounded-sm">
                 Simular
               </Button>
-              <Button asChild size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10 font-medium px-6 rounded-sm">
+              <Button asChild size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10 font-medium px-6 rounded-sm bg-transparent">
                 <a href="https://relatorios.coesasolar.com.br/" target="_blank" rel="noopener noreferrer">Acesso</a>
               </Button>
             </div>
@@ -80,7 +81,7 @@ export function HomeNavbar() {
               <Button onClick={scrollToForm} size="lg" className="bg-white text-black hover:bg-white/90 font-medium mt-4 rounded-sm w-full py-6">
                 Simular Economia
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 font-medium rounded-sm w-full py-6">
+              <Button asChild size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 font-medium rounded-sm w-full py-6 bg-transparent">
                 <a href="https://relatorios.coesasolar.com.br/" target="_blank" rel="noopener noreferrer">Acesso</a>
               </Button>
             </div>
