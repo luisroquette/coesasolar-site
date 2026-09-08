@@ -24,22 +24,40 @@ async function optimizeToWebp(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+// REGRESSÃO 08/09/2026: causa raiz de pipeline_deadline_exceeded recorrente (4 dias úteis
+// seguidos após o guard hasTimeBudget de PR #25, que só cobre as fases OPCIONAIS). A capa
+// (generateAndUploadCover, fase 3 de route.ts) roda ANTES de qualquer guard de budget e este
+// fetch nunca teve timeout — ao contrário de toda outra chamada de rede do pipeline (OpenAI
+// SDK sempre passa `timeout:`), uma resposta lenta/travada da API de imagem consumia o
+// orçamento inteiro (ou mais) sozinha, sem chance de o restante do pipeline rodar dentro dos
+// 270s do deadline interno. 60s = mesmo valor de PUBLISH_SAFETY_MARGIN_MS em route.ts (a
+// margem já reservada para o resto do pipeline terminar).
+const IMAGE_FETCH_TIMEOUT_MS = 60_000;
+
 async function generateImageB64(prompt: string, size = '1536x1024', route = 'coesasolar/blog/image'): Promise<string | null> {
   if (Date.now() < imageApiBlockedUntil) return null;
   const apiKey = process.env.COESASOLAR_OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('COESASOLAR_OPENROUTER_API_KEY not configured');
-  const response = await fetch('https://openrouter.ai/api/v1/images', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      user: route,
-      model: 'bytedance-seed/seedream-4.5',
-      prompt,
-      resolution: '2K',
-      aspect_ratio: size === '1024x1024' ? '1:1' : '16:9',
-      n: 1,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch('https://openrouter.ai/api/v1/images', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        user: route,
+        model: 'bytedance-seed/seedream-4.5',
+        prompt,
+        resolution: '2K',
+        aspect_ratio: size === '1024x1024' ? '1:1' : '16:9',
+        n: 1,
+      }),
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!response.ok) throw Object.assign(new Error(`OpenRouter image error ${response.status}`), { status: response.status });
   return ((await response.json()) as { data?: Array<{ b64_json?: string }> }).data?.[0]?.b64_json ?? null;
 }

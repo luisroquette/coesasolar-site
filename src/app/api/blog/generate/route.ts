@@ -175,8 +175,17 @@ export async function GET(request: NextRequest) {
     }
     const warnings = report.ok ? [] : report.issues;
 
-    // 3. Gerar imagem de capa (falha silenciosa — não bloqueia publicação)
-    const coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
+    // 3. Gerar imagem de capa (falha silenciosa — não bloqueia publicação). REGRESSÃO
+    //    08/09/2026: era a única fase de imagem SEM o guard withinBudget (body images,
+    //    infográfico e quality gate já o tinham desde PR #25) — mesmo tratamento agora,
+    //    consistente com o resto do pipeline (capa já tem fallback próprio via slug).
+    let coverUrl: Awaited<ReturnType<typeof generateAndUploadCover>>;
+    if (withinBudget()) {
+      coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
+    } else {
+      console.warn('[blog/generate] Pulando capa gerada — budget insuficiente antes do hard-kill de 300s');
+      coverUrl = null;
+    }
     lap('capa gerada');
 
     // 3.5 Imagens do corpo: 1 por seção (7-9), alt com keyword (flag imageGenerationEnabled).

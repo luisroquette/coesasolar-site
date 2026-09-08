@@ -123,3 +123,31 @@ describe('REGRESSÃO 26/08/2026: falha de crédito nunca publica capa nula', () 
     expect(generateMock).toHaveBeenCalledTimes(1);
   });
 });
+
+// REGRESSÃO 08/09/2026: causa raiz de pipeline_deadline_exceeded recorrente (09-03, 09-04,
+// 09-07, 09-08, confirmado no coesa_blog_run_log) — generateAndUploadCover roda ANTES de
+// qualquer guard hasTimeBudget (as fases opcionais já tinham desde PR #25) e o fetch de
+// imagem nunca teve timeout, ao contrário de toda outra chamada de rede do pipeline. Uma
+// resposta travada da API de imagem consumia o orçamento inteiro do deadline interno (270s)
+// sozinha. Fix: AbortController com IMAGE_FETCH_TIMEOUT_MS — a capa cai no fallback próprio
+// em vez de travar o pipeline pra sempre.
+describe('REGRESSÃO 08/09/2026: generateAndUploadCover nunca trava indefinidamente', () => {
+  it('fetch travado pra sempre: aborta em 60s e cai no fallback, nunca fica pendente', async () => {
+    vi.useFakeTimers();
+    try {
+      generateMock.mockImplementation((_url: string, options: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        });
+      });
+
+      const coverPromise = generateAndUploadCover('painéis solares', 'energia-solar-travada');
+      await vi.advanceTimersByTimeAsync(60_000);
+      const cover = await coverPromise;
+
+      expect(cover).toBe('https://coesasolar.com.br/api/blog/fallback-cover?slug=energia-solar-travada');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
