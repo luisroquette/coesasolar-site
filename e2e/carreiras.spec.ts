@@ -5,11 +5,23 @@ const SLUG = "/carreiras/desenvolvedora-junior-ai-first"
 test("vaga tem marca, CTA focável e formulário progressivo", async ({ page }) => {
   let extracoes = 0
   let envios = 0
+  let envioMultipart = ""
   await page.route("**/api/carreiras/extrair-cv", async (route) => {
     extracoes++
-    await route.fulfill({ json: { nome: "Teste E2E sem envio", email: null, whatsapp: null, cidade: null, resumo_profissional: null, anos_experiencia: null } })
+    await route.fulfill({ json: {
+      nome: "Teste E2E sem envio", email: null, whatsapp: null, cidade: null,
+      resumo_profissional: "Perfil extraído do currículo de teste.", anos_experiencia: 3,
+      cargo_atual: "Desenvolvedora", formacoes: [{ instituicao: "UFMG", curso: "Sistemas de Informação" }],
+      experiencias: [{ empresa: "Acme", cargo: "Desenvolvedora", inicio: "2024-01", atual: true }],
+      habilidades: ["TypeScript", "React"], idiomas: [{ idioma: "Inglês", nivel: "avancado" }],
+      certificacoes: ["AWS Cloud Practitioner"],
+    } })
   })
-  await page.route("**/api/carreiras/candidaturas", async (route) => { envios++; await route.abort() })
+  await page.route("**/api/carreiras/candidaturas", async (route) => {
+    envios++
+    envioMultipart = route.request().postDataBuffer()?.toString() ?? ""
+    await route.fulfill({ status: 201, json: { ok: true } })
+  })
   await page.goto(SLUG)
   await expect(page.getByRole("img", { name: "Coesa Energia" }).first()).toBeVisible()
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/AI FIRST/i)
@@ -32,9 +44,28 @@ test("vaga tem marca, CTA focável e formulário progressivo", async ({ page }) 
   await page.getByLabel("WhatsApp *").fill("31999998888")
   await page.getByLabel("Cidade *").fill("Belo Horizonte")
   await page.getByRole("button", { name: "Continuar" }).click()
+
+  await expect(page.getByLabel("Cargo atual ou mais recente (opcional)")).toHaveValue("Desenvolvedora")
+  await expect(page.getByLabel("Empresa *")).toHaveValue("Acme")
+  await expect(page.getByLabel("Instituição *")).toHaveValue("UFMG")
+  await page.getByRole("button", { name: "Continuar" }).click()
   await expect(page.getByText("Revise antes de enviar")).toBeVisible()
   await expect(page.getByText(/^Portfólio \*$/)).toBeVisible()
-  expect(envios).toBe(0)
+  await page.getByRole("button", { name: "Link", exact: true }).click()
+  await page.locator("#portfolio-url").fill("https://example.com/portfolio")
+  for (const campo of await page.locator('[data-etapa="4"] input[required], [data-etapa="4"] textarea[required]').all()) {
+    if (await campo.inputValue()) continue
+    if (await campo.getAttribute("type") === "file") await campo.setInputFiles({ name: "anexo.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 test") })
+    else await campo.fill("Resposta E2E")
+  }
+  for (const campo of await page.locator('[data-etapa="4"] select[required]').all()) await campo.selectOption({ index: 1 })
+  await page.getByRole("button", { name: "Enviar candidatura" }).click()
+  await expect(page.getByText(/Candidatura recebida!/)).toBeVisible()
+  expect(envios).toBe(1)
+  expect(envioMultipart).toContain('name="formacoes"')
+  expect(envioMultipart).toContain("UFMG")
+  expect(envioMultipart).toContain('name="experiencias"')
+  expect(envioMultipart).toContain("Acme")
 })
 
 test("lista mantém a área persistida da vaga", async ({ page }) => {
