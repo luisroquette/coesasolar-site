@@ -13,9 +13,10 @@ describe("formulário progressivo de candidatura", () => {
     expect(screen.getByRole("button", { name: "Preencher campos com IA" })).toBeDisabled()
   })
 
-  it("inicia na primeira de três etapas", () => {
+  it("inicia na primeira de quatro etapas, incluindo experiência e formação", () => {
     render(<CandidaturaForm vagaSlug="dev" />)
-    expect(screen.getByText("1. Currículo e consentimento")).toHaveClass("font-semibold")
-    expect(screen.getByText("3. Perfil e revisão")).toBeInTheDocument()
+    expect(screen.getByText("1. Currículo")).toHaveClass("font-semibold")
+    expect(screen.getByText("3. Experiência e formação")).toBeInTheDocument()
+    expect(screen.getByText("4. Perfil e revisão")).toBeInTheDocument()
   })
 })

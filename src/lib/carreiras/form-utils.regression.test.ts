@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { coletarUtm, validarClient, montarLinkWhatsapp, formatarWhatsapp, preencherSeVazio, montarFormData } from "./form-utils"
+import { coletarUtm, validarClient, montarLinkWhatsapp, formatarWhatsapp, preencherListaSeVazia, preencherSeVazio, listaDeTexto, montarFormData, periodoInvalido } from "./form-utils"
 
 describe("REGRESSÃO: form de candidatura", () => {
   it("coleta só utm_*", () => {
@@ -96,5 +96,31 @@ describe("REGRESSÃO: autopreenchimento por IA não sobrescreve campo já preenc
   it("nada extraído (undefined) preserva o valor atual, vazio ou não", () => {
     expect(preencherSeVazio("", undefined)).toBe("")
     expect(preencherSeVazio("Maria", undefined)).toBe("Maria")
+  })
+})
+
+describe("REGRESSÃO: perfil profissional estruturado", () => {
+  it("serializa formação, experiência, habilidades, idiomas e certificações", () => {
+    const fd = montarFormData({
+      nome: "Ana", email: "ana@x.com", whatsapp: "31999998888", cidade: "BH", consent: true, cv: null, website: "",
+      cargoAtual: "Dev", formacoes: [{ instituicao: "UFMG", curso: "SI" }],
+      experiencias: [{ empresa: "Acme", cargo: "Dev" }], habilidades: ["TypeScript"],
+      idiomas: [{ idioma: "Inglês", nivel: "avancado" }], certificacoes: ["AWS"],
+    }, "dev", {})
+    expect(JSON.parse(fd.get("formacoes") as string)).toHaveLength(1)
+    expect(JSON.parse(fd.get("experiencias") as string)[0].empresa).toBe("Acme")
+    expect(JSON.parse(fd.get("habilidades") as string)).toEqual(["TypeScript"])
+  })
+
+  it("não sobrescreve listas editadas e normaliza listas de texto", () => {
+    expect(preencherListaSeVazia(["Manual"], ["IA"])).toEqual(["Manual"])
+    expect(preencherListaSeVazia([], ["IA"])).toEqual(["IA"])
+    expect(preencherListaSeVazia([], "inválido" as never)).toEqual([])
+    expect(listaDeTexto("TypeScript, React\nSQL; Git")).toEqual(["TypeScript", "React", "SQL", "Git"])
+  })
+
+  it("rejeita término anterior ao início", () => {
+    expect(periodoInvalido("2024-02", "2024-01")).toBe(true)
+    expect(periodoInvalido("2024-02", "2024-02")).toBe(false)
   })
 })
