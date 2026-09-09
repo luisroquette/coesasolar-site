@@ -7,7 +7,7 @@ import { CareersHeader } from "@/components/carreiras/CareersHeader"
 import { CandidateButton } from "@/components/carreiras/CandidateButton"
 import { CandidaturaForm } from "@/components/carreiras/CandidaturaForm"
 import { getVagaBySlug, getConfigRhPublica } from "@/lib/carreiras/supabase"
-import { normalizarItensConteudo, normalizarTexto } from "@/lib/carreiras/conteudo"
+import { normalizarDiferenciais, normalizarItensConteudo, normalizarTexto } from "@/lib/carreiras/conteudo"
 import { logoDeMarca } from "@/lib/carreiras/marcas"
 import { Badge } from "@/components/ui/badge"
 
@@ -83,7 +83,7 @@ export default async function VagaDetalhePage({ params }: PageProps) {
         {vaga.pitch && <p style={serif} className="text-lg leading-7 text-foreground">{normalizarTexto(vaga.pitch)}</p>}
         <Lista titulo="💻 O que você fará" itens={vaga.o_que_fara} />
         <Lista titulo="🔍 O que buscamos" itens={vaga.o_que_buscamos} />
-        <Lista titulo="⭐ Diferenciais" itens={vaga.diferenciais} />
+        <Lista titulo="⭐ Diferenciais" itens={normalizarDiferenciais(vaga.diferenciais)} />
 
         {vaga.observacoes && (
           <section className="prose prose-sm max-w-none leading-6 text-foreground prose-p:my-2 prose-li:my-1">
