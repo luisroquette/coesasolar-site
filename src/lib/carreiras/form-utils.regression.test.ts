@@ -45,6 +45,12 @@ describe("REGRESSÃO: máscara de WhatsApp e portfólio (Fase 2)", () => {
     const erros = validarClient({ ...base, portfolioUrl: "https://x.com", portfolioArquivo: pdf })
     expect(erros.length).toBeGreaterThan(0)
   })
+
+  it("exige portfólio quando configurado na vaga", () => {
+    const pdf = new File([new Uint8Array(10)], "cv.pdf", { type: "application/pdf" })
+    const base = { nome: "Ana", email: "a@b.co", whatsapp: "31999998888", cidade: "BH", consent: true, cv: pdf }
+    expect(validarClient({ ...base, portfolioObrigatorio: true })).toContain("Anexe ou informe o link do portfólio.")
+  })
 })
 
 describe("REGRESSÃO: respostas de campos extras no form (Fase 3a)", () => {
@@ -65,6 +71,12 @@ describe("REGRESSÃO: respostas de campos extras no form (Fase 3a)", () => {
     const base = { nome: "Ana", email: "a@b.co", whatsapp: "31999998888", cidade: "BH", consent: true, cv: new File([new Uint8Array(1)], "cv.pdf", { type: "application/pdf" }) };
     const erros = validarClient({ ...base, camposExtras: campos, respostasExtras: {} });
     expect(erros).toContain("Informe: Anos de experiência.");
+  });
+
+  it("validarClient rejeita anexo extra obrigatório ausente", () => {
+    const campos = [{ id: "campo-2", tipo: "anexo" as const, label: "Comprovante", obrigatorio: true, opcoes: [] }];
+    const base = { nome: "Ana", email: "a@b.co", whatsapp: "31999998888", cidade: "BH", consent: true, cv: new File([new Uint8Array(1)], "cv.pdf", { type: "application/pdf" }) };
+    expect(validarClient({ ...base, camposExtras: campos, arquivosExtras: {} })).toContain("Anexe: Comprovante.");
   });
 });
 

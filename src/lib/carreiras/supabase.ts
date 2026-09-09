@@ -7,7 +7,7 @@ const TABLE = 'rh_vagas';
 
 const COLUMNS =
   'slug, titulo, area, regime, modalidade, local, remuneracao, comissionamento, pitch, ' +
-  'o_que_fara, o_que_buscamos, diferenciais, beneficios, observacoes, feedback_dias, publicado_em';
+  'o_que_fara, o_que_buscamos, diferenciais, beneficios, observacoes, portfolio_obrigatorio, feedback_dias, publicado_em';
 
 export interface CampoExtraPublico {
   id: string;
@@ -32,6 +32,7 @@ export interface VagaPublica {
   diferenciais: string[];
   beneficios: string[];
   observacoes: string | null;
+  portfolio_obrigatorio: boolean;
   feedback_dias: number;
   publicado_em: string | null;
   campos: CampoExtraPublico[];
@@ -56,6 +57,7 @@ export function normalizeVaga(row: unknown): VagaPublica {
     diferenciais: arr(r.diferenciais),
     beneficios: arr(r.beneficios),
     observacoes: (r.observacoes as string | null) ?? null,
+    portfolio_obrigatorio: (r.portfolio_obrigatorio as boolean) ?? false,
     feedback_dias: (r.feedback_dias as number) ?? 0,
     publicado_em: (r.publicado_em as string | null) ?? null,
     campos: Array.isArray((r as any).rh_vaga_campos)

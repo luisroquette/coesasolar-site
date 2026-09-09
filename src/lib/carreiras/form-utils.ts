@@ -19,8 +19,10 @@ export interface CandidaturaCampos {
   cv: File | null;
   portfolioUrl?: string;
   portfolioArquivo?: File | null;
+  portfolioObrigatorio?: boolean;
   camposExtras?: CampoExtraForm[];
   respostasExtras?: Record<string, string>;
+  arquivosExtras?: Record<string, File | null>;
 }
 
 export function coletarUtm(searchParams: URLSearchParams): Record<string, string> {
@@ -57,6 +59,9 @@ export function validarClient(campos: CandidaturaCampos): string[] {
   if (campos.portfolioUrl && campos.portfolioArquivo) {
     erros.push('Envie o portfólio como link OU arquivo, não os dois.');
   }
+  if (campos.portfolioObrigatorio && !campos.portfolioUrl?.trim() && !campos.portfolioArquivo) {
+    erros.push('Anexe ou informe o link do portfólio.');
+  }
   if (campos.portfolioArquivo) {
     const PORTFOLIO_MAX_BYTES = 1.5 * 1024 * 1024;
     if (campos.portfolioArquivo.size > PORTFOLIO_MAX_BYTES) {
@@ -69,6 +74,9 @@ export function validarClient(campos: CandidaturaCampos): string[] {
   for (const campo of campos.camposExtras ?? []) {
     if (campo.obrigatorio && campo.tipo !== 'anexo' && !(campos.respostasExtras?.[campo.id] ?? '').trim()) {
       erros.push(`Informe: ${campo.label}.`);
+    }
+    if (campo.obrigatorio && campo.tipo === 'anexo' && !campos.arquivosExtras?.[campo.id]) {
+      erros.push(`Anexe: ${campo.label}.`);
     }
   }
   return erros;
@@ -98,6 +106,7 @@ export function montarFormData(
     consent: boolean; cv: File | null; website: string;
     portfolioUrl?: string; portfolioArquivo?: File | null;
     pretensaoSalarial?: string; disponibilidade?: string;
+    resumoProfissional?: string; anosExperiencia?: string; fontePreenchimento?: 'manual' | 'ia_cv';
   },
   vagaSlug: string,
   utm: Record<string, string>,
@@ -118,6 +127,9 @@ export function montarFormData(
   if (campos.portfolioArquivo) fd.append('portfolio', campos.portfolioArquivo);
   if (campos.pretensaoSalarial) fd.append('pretensao_salarial', campos.pretensaoSalarial);
   if (campos.disponibilidade) fd.append('disponibilidade', campos.disponibilidade);
+  if (campos.resumoProfissional) fd.append('resumo_profissional', campos.resumoProfissional);
+  if (campos.anosExperiencia) fd.append('anos_experiencia', campos.anosExperiencia);
+  if (campos.fontePreenchimento) fd.append('fonte_preenchimento', campos.fontePreenchimento);
   if (extras?.respostasExtras && Object.keys(extras.respostasExtras).length > 0) {
     fd.append('respostas_extras', JSON.stringify(extras.respostasExtras));
   }
