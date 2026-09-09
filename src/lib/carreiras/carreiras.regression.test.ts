@@ -7,6 +7,7 @@ describe("REGRESSÃO: normalização de vaga pública", () => {
     expect(v.o_que_fara).toEqual([])
     expect(v.beneficios).toEqual([])
     expect(v.area).toBeNull()
+    expect(v.portfolio_obrigatorio).toBe(false)
   })
 })
 

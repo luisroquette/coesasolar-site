@@ -2,6 +2,7 @@
 
 import { Mail, Instagram, Linkedin, Facebook } from "lucide-react";
 import coesaLogoWhite from "@/assets/logos/coesa-white-new.png";
+import Image from "next/image";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 
 export function HomeFooter() {
@@ -27,9 +28,11 @@ export function HomeFooter() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           {/* Logo and Description */}
           <div className="lg:col-span-2">
-            <img 
+            <Image
               src={coesaLogoWhite} 
               alt={configs.empresa_nome} 
+              width={192}
+              height={108}
               className="h-8 w-auto mb-6"
             />
             <p className="text-white/50 text-sm leading-relaxed max-w-md mb-8">

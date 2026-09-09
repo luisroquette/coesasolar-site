@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import coesaLogoWhite from "@/assets/logos/coesa-white-new.png";
 
 const navLinks = [
@@ -46,7 +47,7 @@ export function HomeNavbar() {
         <div className="container mx-auto px-4">
           <nav className="flex items-center justify-between h-20">
             <a href="#inicio" className="flex-shrink-0">
-              <img src={coesaLogoWhite} alt="COESA" className="h-8 lg:h-10 w-auto" />
+              <Image src={coesaLogoWhite} alt="COESA" width={192} height={108} className="h-8 lg:h-10 w-auto" priority />
             </a>
             <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
