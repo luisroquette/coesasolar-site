@@ -12,7 +12,7 @@ test("vaga tem marca, CTA focável e formulário progressivo", async ({ page }) 
   await page.route("**/api/carreiras/candidaturas", async (route) => { envios++; await route.abort() })
   await page.goto(SLUG)
   await expect(page.getByRole("img", { name: "Coesa Energia" }).first()).toBeVisible()
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("AI First")
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/AI FIRST/i)
   await expect(page.getByText(/envie (?:seu )?currículo/i)).toHaveCount(0)
   await expect(page.getByRole("heading", { name: /remuneração e benefícios/i })).toHaveCount(1)
 
