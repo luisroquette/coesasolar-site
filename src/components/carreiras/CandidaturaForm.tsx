@@ -120,8 +120,13 @@ export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [], por
 
   function avancar() {
     if (extraindo || !validarEtapa(etapa)) return
-    setEtapa((valor) => Math.min(4, valor + 1))
-    window.setTimeout(() => document.querySelector<HTMLElement>(`[data-etapa="${Math.min(4, etapa + 1)}"] input, [data-etapa="${Math.min(4, etapa + 1)}"] textarea`)?.focus(), 0)
+    irParaEtapa(Math.min(4, etapa + 1))
+  }
+
+  function irParaEtapa(proxima: number) {
+    setErros({})
+    setEtapa(proxima)
+    window.setTimeout(() => document.querySelector<HTMLElement>(`[data-etapa="${proxima}"] input, [data-etapa="${proxima}"] textarea`)?.focus(), 0)
   }
 
   async function extrairCv() {
@@ -145,6 +150,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [], por
       if (dados.habilidades?.length) setHabilidades((valor) => preencherSeVazio(valor, dados.habilidades.join(", ")))
       if (dados.certificacoes?.length) setCertificacoes((valor) => preencherSeVazio(valor, dados.certificacoes.join(", ")))
       setFontePreenchimento("ia_cv")
+      irParaEtapa(2)
     } catch { setErroExtracao("Preenchimento automático indisponível — preencha manualmente.") }
     finally { setExtraindo(false) }
   }
@@ -173,7 +179,17 @@ export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [], por
     } catch { setStatus("erro") }
   }
 
-  if (status === "sucesso") return <p className="text-center">{feedbackDias ? `Candidatura recebida! Você receberá nosso feedback até ${dataFeedback(feedbackDias)} — enviaremos o resultado, seja ele qual for.` : "Currículo recebido! Você entrou no nosso banco de talentos."}</p>
+  if (status === "sucesso") return (
+    <section role="status" aria-live="polite" className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-coesa-green-dark to-coesa-green px-6 py-10 text-center text-white shadow-coesa-lg motion-safe:animate-fade-in md:px-10">
+      <div aria-hidden="true" className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
+      <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white text-coesa-green-dark shadow-lg motion-safe:animate-pulse-green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-8 w-8" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+      </div>
+      <h2 className="relative font-heading text-2xl font-bold md:text-3xl">Candidatura enviada!</h2>
+      <p className="relative mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/90 md:text-base">{feedbackDias ? `Você receberá nosso feedback até ${dataFeedback(feedbackDias)} — enviaremos o resultado, seja ele qual for.` : "Seu currículo entrou no nosso banco de talentos."}</p>
+      <Link href="/carreiras" className="relative mt-6 inline-flex rounded-md border border-white/60 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-white hover:text-coesa-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Ver outras oportunidades</Link>
+    </section>
+  )
   if (status === "encerrada") return <p className="text-center">Esta vaga acabou de ser encerrada. <Link href="/carreiras" className="text-coesa-green underline">Ver outras vagas</Link></p>
 
   const FieldError = ({ id }: { id: string }) => erros[id] ? <p className="mt-1 text-sm text-red-700">{erros[id]}</p> : null
@@ -189,7 +205,7 @@ export function CandidaturaForm({ vagaSlug, feedbackDias, camposExtras = [], por
         <legend className="sr-only">Currículo e consentimento</legend>
         <div><Label htmlFor="cv">Currículo (PDF, até 4MB) *</Label><Input id="cv" type="file" accept="application/pdf" required aria-required="true" aria-invalid={!!erros.cv} onChange={(e) => { setCv(e.target.files?.[0] ?? null); setFontePreenchimento("manual") }} /><FieldError id="cv" /></div>
         <div className="flex items-start gap-2"><Checkbox id="consent" checked={consent} onCheckedChange={(v) => setConsent(v === true)} aria-required="true" aria-invalid={!!erros.consent} className="mt-1" /><Label htmlFor="consent" className="font-normal leading-snug">Autorizo o uso dos meus dados para este processo seletivo e contato sobre futuras oportunidades na Coesa Energia. *</Label></div><FieldError id="consent" />
-        <div className="rounded-md border border-border p-4"><div className="flex items-start gap-2"><Checkbox id="consent-ia" checked={consentIa} onCheckedChange={(v) => setConsentIa(v === true)} className="mt-1" /><Label htmlFor="consent-ia" className="font-normal leading-snug">Opcional: autorizo o envio deste currículo a um serviço de IA para preencher o formulário. Posso continuar manualmente sem autorizar.</Label></div><Button type="button" variant="outline" className="mt-3" disabled={!cv || !consentIa || extraindo} onClick={() => void extrairCv()}>{extraindo ? "Lendo currículo..." : "Preencher campos com IA"}</Button>{erroExtracao && <p className="mt-2 text-sm text-muted-foreground">{erroExtracao}</p>}</div>
+        <div className="rounded-md border border-border p-4"><div className="flex items-start gap-2"><Checkbox id="consent-ia" checked={consentIa} onCheckedChange={(v) => setConsentIa(v === true)} className="mt-1" /><Label htmlFor="consent-ia" className="font-normal leading-snug">Opcional: autorizo o envio deste currículo a um serviço de IA para preencher o formulário. Posso continuar manualmente sem autorizar.</Label></div><Button type="button" variant="outline" className="mt-3" disabled={!cv || !consent || !consentIa || extraindo} onClick={() => void extrairCv()}>{extraindo ? "Lendo currículo..." : "Preencher campos com IA"}</Button>{erroExtracao && <p role="alert" className="mt-3 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">{erroExtracao}</p>}</div>
       </fieldset>}
 
       {etapa === 2 && <fieldset data-etapa="2" className="grid gap-5 md:grid-cols-2"><legend className="sr-only">Dados pessoais</legend>

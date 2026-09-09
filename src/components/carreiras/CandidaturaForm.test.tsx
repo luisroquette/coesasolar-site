@@ -19,4 +19,57 @@ describe("formulário progressivo de candidatura", () => {
     expect(screen.getByText("3. Experiência e formação")).toBeInTheDocument()
     expect(screen.getByText("4. Perfil e revisão")).toBeInTheDocument()
   })
+
+  it("avança automaticamente e preenche os dados quando a extração termina", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ nome: "Ana Solar", email: "ana@example.com", cidade: "Belo Horizonte" }),
+    } as Response)
+    render(<CandidaturaForm vagaSlug="dev" />)
+
+    fireEvent.change(screen.getByLabelText(/Currículo/), { target: { files: [new File(["%PDF-1.4"], "cv.pdf", { type: "application/pdf" })] } })
+    fireEvent.click(screen.getByRole("checkbox", { name: /Autorizo o uso dos meus dados/ }))
+    fireEvent.click(screen.getByRole("checkbox", { name: /serviço de IA/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Preencher campos com IA" }))
+
+    expect(await screen.findByDisplayValue("Ana Solar")).toHaveFocus()
+    expect(screen.getByText("2. Dados pessoais")).toHaveClass("font-semibold")
+  })
+
+  it("mantém a primeira etapa e destaca o erro quando a extração falha", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Currículo protegido por senha." }),
+    } as Response)
+    render(<CandidaturaForm vagaSlug="dev" />)
+
+    fireEvent.change(screen.getByLabelText(/Currículo/), { target: { files: [new File(["%PDF-1.4"], "cv.pdf", { type: "application/pdf" })] } })
+    fireEvent.click(screen.getByRole("checkbox", { name: /Autorizo o uso dos meus dados/ }))
+    fireEvent.click(screen.getByRole("checkbox", { name: /serviço de IA/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Preencher campos com IA" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Currículo protegido por senha.")
+    expect(screen.getByText("1. Currículo")).toHaveClass("font-semibold")
+  })
+
+  it("celebra a candidatura enviada com destaque e próximo caminho", async () => {
+    vi.mocked(fetch).mockResolvedValue({ status: 201 } as Response)
+    render(<CandidaturaForm vagaSlug="dev" feedbackDias={5} />)
+
+    fireEvent.change(screen.getByLabelText(/Currículo/), { target: { files: [new File(["%PDF-1.4"], "cv.pdf", { type: "application/pdf" })] } })
+    fireEvent.click(screen.getByRole("checkbox", { name: /Autorizo o uso dos meus dados/ }))
+    const form = screen.getByRole("button", { name: "Continuar" }).closest("form")!
+    fireEvent.submit(form)
+    fireEvent.change(screen.getByLabelText("Nome completo *"), { target: { value: "Ana Solar" } })
+    fireEvent.change(screen.getByLabelText("E-mail *"), { target: { value: "ana@example.com" } })
+    fireEvent.change(screen.getByLabelText("WhatsApp *"), { target: { value: "31999999999" } })
+    fireEvent.change(screen.getByLabelText("Cidade *"), { target: { value: "Belo Horizonte" } })
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+
+    expect(await screen.findByRole("heading", { name: "Candidatura enviada!" })).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveClass("bg-gradient-to-br", "motion-safe:animate-fade-in")
+    expect(screen.getByRole("link", { name: "Ver outras oportunidades" })).toHaveAttribute("href", "/carreiras")
+  })
 })
