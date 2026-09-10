@@ -1,4 +1,4 @@
-export const maxDuration = 300; // Vercel Pro — até 300s para pipeline completo
+export const maxDuration = 800; // Mesmo teto já usado pelo autoblog CF Gauss para o pipeline completo
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
   // REGRESSÃO 08/09/2026 (E2E real, causa raiz confirmada em produção): a estrutura
   // (generateArticleStructure) roda até 3 tentativas de até 150s cada SEM nenhuma noção do
   // orçamento do pipeline — log real mostrou tentativa 1 (60s, estrutura inválida) seguida
-  // da tentativa 2 estourando o deadline de 270s por dentro. 120s de margem (o dobro do
+  // da tentativa 2 estourando o antigo deadline de 270s por dentro. 120s de margem (o dobro do
   // PUBLISH_SAFETY_MARGIN_MS acima) porque depois da estrutura ainda faltam seções +
   // capa + insertArticle — não só o encerramento gracioso das fases opcionais.
   const STRUCTURE_SAFETY_MARGIN_MS = 120_000;
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
     let report = validate(article);
     if (!report.ok) {
       // ACHADO 25/08/2026: regenerar o ARTIGO INTEIRO aqui (chamada completa, ~190s)
-      // é o que fazia o pipeline estourar maxDuration=300s na 2ª rodada — mesmo quando
+      // é o que fazia o pipeline estourar o antigo maxDuration=300s na 2ª rodada — mesmo quando
       // só sobrava 1-2 issues pequenas. Fix determinístico primeiro (instantâneo, sem
       // custo de LLM); o que sobrar publica com aviso (fail-open, nunca bloqueia).
       console.warn('[blog/generate] Checklist on-page falhou — aplicando fix determinístico:', report.issues);
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
     if (withinBudget()) {
       coverUrl = await generateAndUploadCover(article.image_prompt, article.slug);
     } else {
-      console.warn('[blog/generate] Pulando capa gerada — budget insuficiente antes do hard-kill de 300s');
+      console.warn('[blog/generate] Pulando capa gerada — budget insuficiente antes do hard-kill de 800s');
       coverUrl = null;
     }
     lap('capa gerada');
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
     if (withinBudget()) {
       sectionImages = await generateAndUploadBodyImages(article.sectionImagePrompts, article.slug, kw);
     } else {
-      console.warn('[blog/generate] Pulando imagens de corpo — budget insuficiente antes do hard-kill de 300s');
+      console.warn('[blog/generate] Pulando imagens de corpo — budget insuficiente antes do hard-kill de 800s');
       sectionImages = article.sectionImagePrompts.map(() => null);
     }
     lap('imagens de corpo geradas');
@@ -215,7 +215,7 @@ export async function GET(request: NextRequest) {
     if (withinBudget()) {
       infographicUrl = await generateAndUploadInfographic(article.image_prompt, article.slug);
     } else {
-      console.warn('[blog/generate] Pulando infográfico — budget insuficiente antes do hard-kill de 300s');
+      console.warn('[blog/generate] Pulando infográfico — budget insuficiente antes do hard-kill de 800s');
       infographicUrl = null;
     }
     lap('infográfico (flag off = instantâneo)');
@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
         },
       );
     } else {
-      console.warn('[blog/generate] Pulando quality gate — budget insuficiente antes do hard-kill de 300s');
+      console.warn('[blog/generate] Pulando quality gate — budget insuficiente antes do hard-kill de 800s');
       gateResult = {
         content: { article, content: contentWithCtas },
         judged: { skipped: true, score: null, issues: [], categories: null },
