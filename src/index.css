@@ -284,4 +284,36 @@
     pointer-events: none;
     z-index: 0;
   }
+
+  .careers-form-dark {
+    color: white;
+  }
+
+  .careers-form-dark input,
+  .careers-form-dark textarea,
+  .careers-form-dark select {
+    border-color: rgb(255 255 255 / 0.16);
+    background: #07140f;
+    color: white;
+  }
+
+  .careers-form-dark input::placeholder,
+  .careers-form-dark textarea::placeholder,
+  .careers-form-dark .text-muted-foreground {
+    color: rgb(255 255 255 / 0.45);
+  }
+
+  .careers-form-dark .border-border,
+  .careers-form-dark .border-input {
+    border-color: rgb(255 255 255 / 0.16);
+  }
+
+  .careers-form-dark .bg-background,
+  .careers-form-dark .careers-review {
+    background: rgb(255 255 255 / 0.045);
+  }
+
+  .careers-form-dark .text-coesa-green-dark {
+    color: #83d9ad;
+  }
 }

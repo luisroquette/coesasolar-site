@@ -1,6 +1,6 @@
 "use client"
 
-export function CandidateButton({ children = "Candidate-se agora", dark = false }: { children?: string; dark?: boolean }) {
+export function CandidateButton({ children = "Candidate-se agora" }: { children?: string }) {
   return (
     <a
       href="#candidatura"
@@ -9,9 +9,9 @@ export function CandidateButton({ children = "Candidate-se agora", dark = false 
         document.getElementById("candidatura")?.scrollIntoView({ behavior: "smooth", block: "start" })
         window.setTimeout(() => document.getElementById("cv")?.focus(), 450)
       }}
-      className={`inline-flex h-11 items-center justify-center rounded-md px-6 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${dark ? "bg-coesa-green-dark text-white hover:bg-coesa-green" : "bg-white text-coesa-green-dark hover:bg-white/90 focus-visible:ring-white"}`}
+      className="inline-flex h-11 items-center justify-center gap-3 rounded-full bg-white px-6 text-sm font-semibold text-[#06110d] transition-all hover:-translate-y-0.5 hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
     >
-      {children}
+      {children}<span aria-hidden>→</span>
     </a>
   )
 }

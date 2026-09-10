@@ -6,7 +6,7 @@ import coesaLogoWhite from "@/assets/logos/coesa-white-new.png";
 import Image from "next/image";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 
-export function HomeFooter() {
+export function HomeFooter({ compact = false }: { compact?: boolean }) {
   const currentYear = new Date().getFullYear();
   const { configs, loading } = useConfiguracoes();
 
@@ -24,9 +24,9 @@ export function HomeFooter() {
 
   return (
     <footer className="bg-black text-white">
-      <div className="container mx-auto px-4 py-16 lg:py-20">
+      <div className={`container mx-auto px-4 ${compact ? "py-10" : "py-16 lg:py-20"}`}>
         {/* Main Footer Content */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+        <div className={`grid md:grid-cols-2 lg:grid-cols-4 ${compact ? "mb-8 gap-8" : "mb-16 gap-12"}`}>
           {/* Logo and Description */}
           <div className="lg:col-span-2">
             <Image
@@ -34,9 +34,9 @@ export function HomeFooter() {
               alt={configs.empresa_nome} 
               width={192}
               height={108}
-              className="h-8 w-auto mb-6"
+              className={`h-8 w-auto ${compact ? "mb-4" : "mb-6"}`}
             />
-            <p className="text-white/50 text-sm leading-relaxed max-w-md mb-8">
+            <p className={`text-white/50 text-sm leading-relaxed max-w-md ${compact ? "mb-4" : "mb-8"}`}>
               Pioneiros no modelo de energia solar por assinatura, 
               proporcionando economia real e sustentabilidade para residências 
               e empresas em todo o Brasil.
