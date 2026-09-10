@@ -4,6 +4,7 @@ export { BenefitsSection } from "./BenefitsSection";
 export { SimulationForm } from "./SimulationForm";
 export { WhyChooseSection } from "./WhyChooseSection";
 export { AboutSection } from "./AboutSection";
+export { PressSection } from "./PressSection";
 export { StatsCounter } from "./StatsCounter";
 export { PlansSection } from "./PlansSection";
 export { HowItWorksSection } from "./HowItWorksSection";
