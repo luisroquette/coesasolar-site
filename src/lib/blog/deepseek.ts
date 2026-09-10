@@ -534,7 +534,10 @@ export async function generateArticleWithSections(
   const tSections = Date.now();
   const bodies = await Promise.all(
     structure.sections.map((section, index) =>
-      writeSection(keyword, section, index, structure.sections.length)
+      writeSection(keyword, section, index, structure.sections.length).catch((err) => {
+        console.warn(`[deepseek] Seção "${section.h2}" falhou após os retries; usando o content_brief como corpo mínimo.`, err);
+        return section.content_brief;
+      })
     )
   );
   console.warn(`[deepseek] ${bodies.length} seções paralelas levaram ${Math.round((Date.now() - tSections) / 1000)}s`);
