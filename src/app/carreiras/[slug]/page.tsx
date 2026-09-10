@@ -44,8 +44,8 @@ function Lista({ titulo, itens }: { titulo: string; itens: string[] }) {
   )
 }
 
-function Metadado({ icon: Icon, children }: { icon: typeof MapPin; children: ReactNode }) {
-  return <span className="inline-flex items-center gap-2 text-sm text-white/65"><Icon aria-hidden className="h-4 w-4 text-white/85" />{children}</span>
+function Metadado({ icon: Icon, label, children }: { icon: typeof MapPin; label: string; children: ReactNode }) {
+  return <span className="inline-flex items-center gap-2 text-sm text-white/65"><Icon aria-hidden className="h-4 w-4 text-white/85" /><span className="sr-only">{label}: </span>{children}</span>
 }
 
 export default async function VagaDetalhePage({ params }: PageProps) {
@@ -68,11 +68,11 @@ export default async function VagaDetalhePage({ params }: PageProps) {
   if (vaga.local) jobPosting.jobLocation = { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: vaga.local } }
 
   const metadados = [
-    vaga.modalidade && { icon: MapPin, valor: vaga.modalidade },
-    vaga.area && { icon: Code2, valor: vaga.area },
-    vaga.regime && { icon: BriefcaseBusiness, valor: vaga.regime },
-    vaga.local && { icon: MapPin, valor: vaga.local },
-  ].filter(Boolean) as { icon: typeof MapPin; valor: string }[]
+    vaga.modalidade && { icon: MapPin, label: "Modalidade", valor: vaga.modalidade },
+    vaga.area && { icon: Code2, label: "Área", valor: vaga.area },
+    vaga.regime && { icon: BriefcaseBusiness, label: "Regime", valor: vaga.regime },
+    vaga.local && { icon: MapPin, label: "Local", valor: vaga.local },
+  ].filter(Boolean) as { icon: typeof MapPin; label: string; valor: string }[]
 
   return (
     <main className="min-h-screen bg-[#06110d] text-white">
@@ -88,7 +88,7 @@ export default async function VagaDetalhePage({ params }: PageProps) {
             <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.24em] text-[#83d9ad]">Oportunidade profissional</p>
             <h1 className="max-w-4xl text-3xl font-semibold uppercase leading-[1.05] tracking-[-0.02em] md:text-[40px]">{vaga.titulo}</h1>
             <div className="mt-6 flex flex-wrap gap-x-7 gap-y-3">
-              {metadados.map(({ icon, valor }, indice) => <Metadado key={`hero-${indice}-${valor}`} icon={icon}>{valor}</Metadado>)}
+              {metadados.map(({ icon, label, valor }) => <Metadado key={`hero-${label}-${valor}`} icon={icon} label={label}>{valor}</Metadado>)}
             </div>
           </div>
           <div className="lg:col-span-3 lg:flex lg:justify-end"><CandidateButton /></div>
@@ -128,7 +128,7 @@ export default async function VagaDetalhePage({ params }: PageProps) {
         <aside className="lg:col-span-4">
           <div className="rounded-2xl border border-white/15 bg-white/[0.025] p-6 lg:sticky lg:top-6">
             <h2 className="mb-5 text-xs font-bold uppercase tracking-[0.16em]">Resumo da vaga</h2>
-            <div className="flex flex-col gap-4">{metadados.map(({ icon, valor }, indice) => <Metadado key={`resumo-${indice}-${valor}`} icon={icon}>{valor}</Metadado>)}</div>
+            <div className="flex flex-col gap-4">{metadados.map(({ icon, label, valor }) => <Metadado key={`resumo-${label}-${valor}`} icon={icon} label={label}>{valor}</Metadado>)}</div>
             <div className="my-6 border-t border-white/15" />
             <CandidateButton />
             {config?.mensagem_final && <><div className="my-6 border-t border-white/15" /><p className="text-sm leading-6 text-white/60">{config.mensagem_final}</p></>}

@@ -37,6 +37,7 @@ describe("VagaDetalhePage — resumo e metadados", () => {
     const jsx = await VagaDetalhePage({ params: Promise.resolve({ slug: "vaga-1" }) })
     render(jsx)
     expect(screen.getAllByText("Híbrido")).toHaveLength(2)
+    expect(screen.getAllByText("Modalidade:")).toHaveLength(2)
     expect(screen.getByRole("heading", { name: "Resumo da vaga" })).toBeInTheDocument()
   })
 

@@ -16,8 +16,37 @@ describe("formulário progressivo de candidatura", () => {
   it("inicia na primeira de quatro etapas, incluindo experiência e formação", () => {
     render(<CandidaturaForm vagaSlug="dev" />)
     expect(screen.getByText("1. Currículo")).toHaveClass("font-semibold")
+    expect(screen.getByText("1. Currículo")).toHaveAttribute("aria-current", "step")
     expect(screen.getByText("3. Experiência e formação")).toBeInTheDocument()
     expect(screen.getByText("4. Perfil e revisão")).toBeInTheDocument()
+  })
+
+  it("associa mensagens de validação aos campos inválidos", () => {
+    render(<CandidaturaForm vagaSlug="dev" />)
+    fireEvent.submit(screen.getByRole("button", { name: "Continuar" }).closest("form")!)
+
+    const curriculo = screen.getByLabelText(/Currículo/)
+    expect(curriculo).toHaveAttribute("aria-describedby", "cv-erro")
+    expect(document.getElementById("cv-erro")).toHaveTextContent("Anexe seu currículo em PDF.")
+  })
+
+  it("rejeita link com protocolo não web antes do envio", () => {
+    render(<CandidaturaForm vagaSlug="dev" />)
+    const form = screen.getByRole("button", { name: "Continuar" }).closest("form")!
+    fireEvent.change(screen.getByLabelText(/Currículo/), { target: { files: [new File(["%PDF-1.4"], "cv.pdf", { type: "application/pdf" })] } })
+    fireEvent.click(screen.getByRole("checkbox", { name: /Autorizo o uso dos meus dados/ }))
+    fireEvent.submit(form)
+    fireEvent.change(screen.getByLabelText("Nome completo *"), { target: { value: "Ana" } })
+    fireEvent.change(screen.getByLabelText("E-mail *"), { target: { value: "ana@example.com" } })
+    fireEvent.change(screen.getByLabelText("WhatsApp *"), { target: { value: "31999999999" } })
+    fireEvent.change(screen.getByLabelText("Cidade *"), { target: { value: "BH" } })
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    fireEvent.change(screen.getByLabelText("LinkedIn (opcional)"), { target: { value: "javascript:alert(1)" } })
+    fireEvent.submit(form)
+
+    expect(screen.getAllByText("Use um link iniciado por http:// ou https://.").length).toBeGreaterThan(0)
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   it("avança automaticamente e preenche os dados quando a extração termina", async () => {
