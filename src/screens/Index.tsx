@@ -4,6 +4,7 @@ import {
   BenefitsSection,
   WhyChooseSection,
   AboutSection,
+  PressSection,
   PlansSection,
   HowItWorksSection,
   FAQSection,
@@ -26,6 +27,7 @@ const Index = () => {
         <PlansSection />
         <HowItWorksSection />
         <AboutSection />
+        <PressSection />
         <HomeBlogSection />
         <FAQSection />
         <CTASection />
