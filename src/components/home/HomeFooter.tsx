@@ -1,6 +1,7 @@
 "use client";
 
 import { Mail, Instagram, Linkedin, Facebook } from "lucide-react";
+import Script from "next/script";
 import coesaLogoWhite from "@/assets/logos/coesa-white-new.png";
 import Image from "next/image";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
@@ -117,6 +118,24 @@ export function HomeFooter() {
             <p className="text-white/30 text-xs">
               {configs.empresa_nome}
             </p>
+            <a
+              href="https://www.reclameaqui.com.br/rav/p1b9"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Ver selo da Coesa no Reclame Aqui"
+              className="flex min-h-8 items-center"
+            >
+              <div id="ra-verified-seal">
+                <Script
+                  id="ra-embed-verified-seal"
+                  src="https://s3.amazonaws.com/raichu-beta/ra-verified/bundle.js"
+                  strategy="afterInteractive"
+                  data-id="b2xrYlJDLXFqSlROcmFuTTpjb2VzYS1lbmVyZ2lhLWludGVsaWdlbnRl"
+                  data-target="ra-verified-seal"
+                  data-model="horizontal_1"
+                />
+              </div>
+            </a>
           </div>
         </div>
       </div>
