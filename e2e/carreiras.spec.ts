@@ -70,6 +70,15 @@ test("vaga tem marca, CTA focável e formulário progressivo", async ({ page }) 
 
 test("lista mantém a área persistida da vaga", async ({ page }) => {
   await page.goto("/carreiras")
-  await expect(page.getByText("TECH, DEV & AI", { exact: true })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "TECH, DEV & AI", exact: true })).toBeVisible()
   await expect(page.getByRole("link", { name: /Desenvolvedor.*AI First/i })).toBeVisible()
+})
+
+test("banco de talentos mantém a experiência visual das carreiras", async ({ page }) => {
+  await page.goto("/carreiras/banco-de-talentos")
+  await expect(page.getByRole("img", { name: "Coesa Energia" }).first()).toBeVisible()
+  await expect(page.getByRole("heading", { level: 1, name: "Não achou sua vaga?" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Cadastre seu perfil" })).toBeVisible()
+  await expect(page.locator("#cv")).toBeVisible()
+  await expect(page.locator("main")).toHaveCSS("background-color", "rgb(6, 17, 13)")
 })
