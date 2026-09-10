@@ -739,8 +739,8 @@ export async function generateArticle(
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleContent> {
-  // Timeout explícito: o default do SDK é 10min, bem acima do maxDuration=300s da rota
-  // de geração — sem isso, uma chamada travada é morta pelo platform timeout em vez de
+  // Timeout explícito: uma única chamada não pode consumir a maior parte dos 800s da rota
+  // de geração — sem isso, uma chamada travada é morta pelo deadline do pipeline em vez de
   // lançar um erro tratável, e o insertRunLog de erro no catch da rota nunca roda.
   const client = new OpenAI({
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
@@ -864,11 +864,11 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
 }
 
 async function askDeepseek(system: string, user: string, route: string, maxTokens?: number, model: string = PRIMARY_STRUCTURE_MODEL): Promise<string> {
-  // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
-  // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
+  // Mesmo motivo do timeout em generateArticle: o default do SDK (10min) consumiria quase
+  // todo o orçamento da rota e mascararia falhas de rede como deadline do pipeline.
   // 150s (não 90s) quando maxTokens é passado (generateArticleStructure): achado 25/08/2026
   // — 90s cortava a conexão no meio de uma resposta de raciocínio longa antes dela terminar
-  // (erro "terminated" do Undici), mesmo dentro do maxDuration=300s da rota.
+  // (erro "terminated" do Undici), ainda dentro do antigo maxDuration=300s da rota.
   const client = new OpenAI({
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',

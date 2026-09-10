@@ -1,5 +1,5 @@
 // REGRESSÃO 02/09/2026 (E2E real): run_log preso em 'running' desde 27/08 (recorrente em
-// 01/09 e 02/09) — a Vercel mata /api/blog/generate com SIGKILL ao bater maxDuration=300s.
+// 01/09 e 02/09) — a Vercel matava /api/blog/generate com SIGKILL ao bater maxDuration=300s.
 // O catch nunca roda, insertRunLog nunca grava, e a linha do claim fica presa pra sempre.
 // Este teste exercita o handler GET real de ponta a ponta (mocka só as fronteiras de I/O
 // externo — Supabase/DeepSeek/imagem/distribuição — nunca a lógica do route.ts) travando
@@ -118,9 +118,9 @@ describe("REGRESSÃO 02/09/2026 (E2E real): deadline interno sempre vence o SIGK
     });
 
     const responsePromise = GET(request);
-    // maxDuration=300s, DEADLINE_MARGIN_MS=30s → PIPELINE_DEADLINE_MS=270s. Avançar exatamente
+    // maxDuration=800s, DEADLINE_MARGIN_MS=30s → PIPELINE_DEADLINE_MS=770s. Avançar exatamente
     // até lá é o pior caso que ainda deve responder — 30s de sobra antes do kill real da Vercel.
-    await vi.advanceTimersByTimeAsync(270_000);
+    await vi.advanceTimersByTimeAsync(770_000);
     const response = await responsePromise;
 
     expect(response.status).toBe(500);
@@ -136,7 +136,7 @@ describe("REGRESSÃO 02/09/2026 (E2E real): deadline interno sempre vence o SIGK
     });
 
     // O deadline dispara ANTES do teto real da Vercel — a garantia não depende de sorte.
-    expect(270_000).toBeLessThan(300_000);
+    expect(770_000).toBeLessThan(800_000);
   });
 
   async function setupHappyPathMocks() {
