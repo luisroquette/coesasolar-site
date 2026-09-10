@@ -418,6 +418,19 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
     expect(article.content.indexOf('## Em resumo')).toBeLessThan(article.content.indexOf('## Perguntas Frequentes'));
   });
 
+  it('REGRESSÃO 10/09/2026: timeout de uma seção usa fallback local e não derruba o artigo inteiro', async () => {
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(ESTRUTURA_MONTAGEM) } }] })
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockResolvedValue({ choices: [{ message: { content: 'Corpo de exemplo da seção.' } }] });
+
+    const article = await generateArticleWithSections('placa solar');
+
+    expect(article.bodies[0]).toContain('Instrução de 150-200 palavras para o redator.');
+    expect(article.bodies.slice(1)).toEqual(Array(6).fill('Corpo de exemplo da seção.'));
+    expect(createMock).toHaveBeenCalledTimes(8);
+  });
+
   it('injectSectionImages: slot sem imagem correspondente (upload falhou) é removido, nunca publica placeholder cru', () => {
     const content = 'texto\n<!-- IMG_SLOT:0 -->\nmais texto\n<!-- IMG_SLOT:1 -->';
     const out = injectSectionImages(content, [{ url: 'https://x/a.webp', alt: 'a' }, null]);
