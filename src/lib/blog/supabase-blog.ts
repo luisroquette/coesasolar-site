@@ -16,6 +16,7 @@
 // servidor-only: escrevem com service role via getServiceClient(), sempre
 // atrás de rotas autenticadas (CRON_SECRET ou chave de API própria).
 import { createClient } from '@supabase/supabase-js';
+import { normalizePublicDiscountClaim } from '@/lib/public-discount';
 
 const TABLES = {
   articles: 'coesa_articles',
@@ -66,6 +67,28 @@ export interface ArticleSummary {
   keyword: string | null;
   category: string | null;
   published_at: string;
+}
+
+function normalizeArticleSummary(article: ArticleSummary): ArticleSummary {
+  return {
+    ...article,
+    title: normalizePublicDiscountClaim(article.title),
+    meta_desc: article.meta_desc ? normalizePublicDiscountClaim(article.meta_desc) : null,
+    keyword: article.keyword ? normalizePublicDiscountClaim(article.keyword) : null,
+  };
+}
+
+function normalizeArticle(article: Article): Article {
+  return {
+    ...normalizeArticleSummary(article),
+    id: article.id,
+    page_title: article.page_title ? normalizePublicDiscountClaim(article.page_title) : null,
+    content: normalizePublicDiscountClaim(article.content),
+    cover_alt: article.cover_alt ? normalizePublicDiscountClaim(article.cover_alt) : null,
+    guest_author: article.guest_author,
+    guest_bio: article.guest_bio ? normalizePublicDiscountClaim(article.guest_bio) : null,
+    guest_url: article.guest_url,
+  };
 }
 
 export interface InsertArticleInput {
@@ -214,7 +237,7 @@ export async function getLinkCandidates(): Promise<Array<{ slug: string; title: 
     .eq('status', 'published')
     .order('published_at', { ascending: false })
     .limit(30);
-  return data ?? [];
+  return ((data ?? []) as ArticleSummary[]).map(normalizeArticleSummary);
 }
 
 export async function getAllArticles(): Promise<ArticleSummary[]> {
@@ -224,7 +247,7 @@ export async function getAllArticles(): Promise<ArticleSummary[]> {
     .select('slug, title, meta_desc, cover_url, keyword, category, published_at')
     .eq('status', 'published')
     .order('published_at', { ascending: false });
-  return data ?? [];
+  return ((data ?? []) as ArticleSummary[]).map(normalizeArticleSummary);
 }
 
 export async function getArticlesByCategory(category: string): Promise<ArticleSummary[]> {
@@ -268,7 +291,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     .eq('slug', slug)
     .eq('status', 'published')
     .single();
-  return data ?? null;
+  return data ? normalizeArticle(data as Article) : null;
 }
 
 /** Upload genérico no bucket blog-covers (capa e imagens do corpo). */

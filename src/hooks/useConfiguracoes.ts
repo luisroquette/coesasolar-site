@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { PUBLIC_DISCOUNT_LABEL } from '@/lib/public-discount';
 
 export interface ConfiguracoesSistema {
   // Empresa - Dados básicos
@@ -108,7 +109,7 @@ const defaultConfigs: ConfiguracoesSistema = {
   // Hero Section
   hero_video_youtube_id: 'ftw1xfJQ5jM',
   hero_video_origin: 'https://coesasolar.com.br',
-  hero_stats: '[{"icon":"Zap","value":"30%","label":"Economia"},{"icon":"Leaf","value":"100%","label":"Energia Limpa"},{"icon":"Shield","value":"5 anos","label":"Garantia"},{"icon":"Clock","value":"0","label":"Investimento"}]',
+  hero_stats: `[{"icon":"Zap","value":"${PUBLIC_DISCOUNT_LABEL}","label":"Economia"},{"icon":"Leaf","value":"100%","label":"Energia Limpa"},{"icon":"Shield","value":"5 anos","label":"Garantia"},{"icon":"Clock","value":"0","label":"Investimento"}]`,
   
   // Home Background Images (Phase 14 - Zero Hardcode 100%)
   home_bg_about: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
