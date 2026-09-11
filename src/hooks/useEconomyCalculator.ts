@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WHATSAPP_5193 } from '@/lib/whatsapp-numbers';
+import { PUBLIC_DISCOUNT_PERCENT } from '@/lib/public-discount';
 
 export interface EconomyConfig {
   disponibilidadeMonofasico: number;
@@ -62,7 +63,7 @@ const defaultConfig: EconomyConfig = {
   pisCofinsAliquota: 0.0365,
   inflacaoEnergetica: 0.07,
   unlockThreshold: 3000,
-  descontoDefault: 25,
+  descontoDefault: PUBLIC_DISCOUNT_PERCENT,
   fidelidadeDefault: 3,
 };
 

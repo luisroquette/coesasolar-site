@@ -1,23 +1,28 @@
 import type { Metadata } from "next"
 import Script from "next/script"
 import { AUTOBLOG_PROFILE } from "@/lib/autoblog-profile"
+import { PUBLIC_DISCOUNT_LABEL } from "@/lib/public-discount"
 import "../index.css"
 
+const publicDescription = `Economize ${PUBLIC_DISCOUNT_LABEL} na sua conta de luz com energia solar por assinatura. Sem investimento inicial, sem obras.`
+
+// Next.js exige que os metadados sejam exportados pelo próprio arquivo de layout.
+// eslint-disable-next-line react-refresh/only-export-components
 export const metadata: Metadata = {
   title: "Coesa Solar - Energia Solar por Assinatura",
-  description: "Economize até 30% na sua conta de luz com energia solar por assinatura. Sem investimento inicial, sem obras.",
+  description: publicDescription,
   icons: { icon: "/favicon.png" },
   openGraph: {
     type: "website",
     title: "Coesa Solar - Energia Solar por Assinatura",
-    description: "Economize até 30% na sua conta de luz com energia solar por assinatura. Sem investimento inicial, sem obras.",
+    description: publicDescription,
     images: ["https://coesasolar.com.br/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
     site: "@CoesaSolar",
     title: "Coesa Solar - Energia Solar por Assinatura",
-    description: "Economize até 30% na sua conta de luz com energia solar por assinatura. Sem investimento inicial, sem obras.",
+    description: publicDescription,
     images: ["https://coesasolar.com.br/og-image.png"],
   },
   verification: {
