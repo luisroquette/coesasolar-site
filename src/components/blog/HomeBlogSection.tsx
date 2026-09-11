@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { normalizePublicDiscountClaim } from "@/lib/public-discount";
 
 interface BlogArticle {
   slug: string;
@@ -21,6 +22,15 @@ function formatDate(iso: string): string {
     month: "long",
     year: "numeric",
   });
+}
+
+function normalizeArticle(article: BlogArticle): BlogArticle {
+  return {
+    ...article,
+    title: normalizePublicDiscountClaim(article.title),
+    meta_desc: article.meta_desc ? normalizePublicDiscountClaim(article.meta_desc) : null,
+    keyword: article.keyword ? normalizePublicDiscountClaim(article.keyword) : null,
+  };
 }
 
 export function HomeBlogSection() {
@@ -39,7 +49,7 @@ export function HomeBlogSection() {
       { headers: { apikey: anon, Authorization: `Bearer ${anon}` } }
     )
       .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setArticles(Array.isArray(data) ? data : []))
+      .then((data) => setArticles(Array.isArray(data) ? data.map(normalizeArticle) : []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false));
   }, []);

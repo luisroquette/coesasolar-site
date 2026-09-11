@@ -1,10 +1,12 @@
 "use client";
 
 import { Mail, Instagram, Linkedin, Facebook } from "lucide-react";
+import Script from "next/script";
 import coesaLogoWhite from "@/assets/logos/coesa-white-new.png";
+import Image from "next/image";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 
-export function HomeFooter() {
+export function HomeFooter({ compact = false }: { compact?: boolean }) {
   const currentYear = new Date().getFullYear();
   const { configs, loading } = useConfiguracoes();
 
@@ -22,17 +24,19 @@ export function HomeFooter() {
 
   return (
     <footer className="bg-black text-white">
-      <div className="container mx-auto px-4 py-16 lg:py-20">
+      <div className={`container mx-auto px-4 ${compact ? "py-10" : "py-16 lg:py-20"}`}>
         {/* Main Footer Content */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+        <div className={`grid md:grid-cols-2 lg:grid-cols-4 ${compact ? "mb-8 gap-8" : "mb-16 gap-12"}`}>
           {/* Logo and Description */}
           <div className="lg:col-span-2">
-            <img 
+            <Image
               src={coesaLogoWhite} 
               alt={configs.empresa_nome} 
-              className="h-8 w-auto mb-6"
+              width={192}
+              height={108}
+              className={`h-8 w-auto ${compact ? "mb-4" : "mb-6"}`}
             />
-            <p className="text-white/50 text-sm leading-relaxed max-w-md mb-8">
+            <p className={`text-white/50 text-sm leading-relaxed max-w-md ${compact ? "mb-4" : "mb-8"}`}>
               Pioneiros no modelo de energia solar por assinatura, 
               proporcionando economia real e sustentabilidade para residências 
               e empresas em todo o Brasil.
@@ -114,6 +118,24 @@ export function HomeFooter() {
             <p className="text-white/30 text-xs">
               {configs.empresa_nome}
             </p>
+            <a
+              href="https://www.reclameaqui.com.br/rav/p1b9"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Ver selo da Coesa no Reclame Aqui"
+              className="flex min-h-8 items-center"
+            >
+              <div id="ra-verified-seal">
+                <Script
+                  id="ra-embed-verified-seal"
+                  src="https://s3.amazonaws.com/raichu-beta/ra-verified/bundle.js"
+                  strategy="afterInteractive"
+                  data-id="b2xrYlJDLXFqSlROcmFuTTpjb2VzYS1lbmVyZ2lhLWludGVsaWdlbnRl"
+                  data-target="ra-verified-seal"
+                  data-model="horizontal_1"
+                />
+              </div>
+            </a>
           </div>
         </div>
       </div>

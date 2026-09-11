@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizePublicDiscountClaim, PUBLIC_DISCOUNT_LABEL } from '@/lib/public-discount';
 
 export interface FAQ {
   question: string;
@@ -18,7 +19,7 @@ const DEFAULT_FAQS: FAQ[] = [
   },
   {
     question: "Quanto vou economizar na minha conta de luz?",
-    answer: "A economia varia de 15% a 30% dependendo do seu consumo mensal. Quanto maior o consumo, maior o desconto. Faça uma simulação gratuita e descubra o valor exato para o seu caso.",
+    answer: `Você economiza ${PUBLIC_DISCOUNT_LABEL} na conta de luz. Faça uma simulação gratuita e descubra o valor exato para o seu caso.`,
   },
   {
     question: "Existe algum custo de adesão ou mensalidade?",
@@ -55,11 +56,20 @@ export function useFAQs() {
         }
 
         const kbSources = Array.isArray(data.kb_sources) ? data.kb_sources : [];
-        const faqSource = kbSources.find((kb: any) => kb.type === 'faq' || kb.name?.toLowerCase().includes('faq'));
+        const faqSource = kbSources.find((kb) => {
+          if (typeof kb !== 'object' || kb === null || Array.isArray(kb)) return false;
+          const source = kb as Record<string, unknown>;
+          return source.type === 'faq' || (
+            typeof source.name === 'string' && source.name.toLowerCase().includes('faq')
+          );
+        });
 
         if (faqSource && typeof faqSource === 'object' && 'content' in faqSource && faqSource.content) {
           // Parsear FAQs do content (formato Q: ... A: ...)
-          const parsedFaqs = parseFAQContent(String(faqSource.content));
+          const parsedFaqs = parseFAQContent(String(faqSource.content)).map((faq) => ({
+            ...faq,
+            answer: normalizePublicDiscountClaim(faq.answer),
+          }));
           if (parsedFaqs.length > 0) {
             setFaqs(parsedFaqs);
             return;

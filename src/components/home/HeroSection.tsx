@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { WHATSAPP_5192 } from "@/lib/whatsapp-numbers";
+import { PUBLIC_DISCOUNT_LABEL } from "@/lib/public-discount";
 
 const iconMap: Record<string, LucideIcon> = {
   Zap, Leaf, Shield, Clock
@@ -23,11 +24,12 @@ export function HeroSection() {
       const parsed = JSON.parse(configs.hero_stats) as HeroStat[];
       return parsed.map(s => ({
         ...s,
+        value: s.label.toLowerCase() === "economia" ? PUBLIC_DISCOUNT_LABEL : s.value,
         IconComponent: iconMap[s.icon] || Zap
       }));
     } catch {
       return [
-        { icon: 'Zap', value: '30%', label: 'Economia', IconComponent: Zap },
+        { icon: 'Zap', value: PUBLIC_DISCOUNT_LABEL, label: 'Economia', IconComponent: Zap },
         { icon: 'Leaf', value: '100%', label: 'Energia Limpa', IconComponent: Leaf },
         { icon: 'Shield', value: '5 anos', label: 'Garantia', IconComponent: Shield },
         { icon: 'Clock', value: '0', label: 'Investimento', IconComponent: Clock },
@@ -85,7 +87,7 @@ export function HeroSection() {
             
             {/* Subtitle */}
             <p className="text-lg md:text-xl text-white/70 mb-10 font-light tracking-wide max-w-2xl mx-auto">
-              Economize até 30% na sua conta de luz sem investir nada.
+              Economize {PUBLIC_DISCOUNT_LABEL} na sua conta de luz sem investir nada.
               Energia limpa direto para sua casa.
             </p>
 

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import "@testing-library/jest-dom/vitest"
 
 const vagaBase = {
@@ -32,19 +32,19 @@ import VagaDetalhePage from "./page"
 // Pedido do dono (08/09/2026): Modalidade ficava diluída na linha de
 // metadados junto com área/regime/local — precisa ser um destaque visual
 // separado, próprio.
-describe("VagaDetalhePage — Modalidade em destaque", () => {
-  it("mostra a modalidade como badge separado, não só na linha de metadados", async () => {
+describe("VagaDetalhePage — resumo e metadados", () => {
+  it("mostra a modalidade no hero e no resumo lateral", async () => {
     const jsx = await VagaDetalhePage({ params: Promise.resolve({ slug: "vaga-1" }) })
     render(jsx)
-    const badge = screen.getByText("Híbrido")
-    expect(badge.tagName).toBe("DIV")
+    expect(screen.getAllByText("Híbrido")).toHaveLength(2)
+    expect(screen.getAllByText("Modalidade:")).toHaveLength(2)
+    expect(screen.getByRole("heading", { name: "Resumo da vaga" })).toBeInTheDocument()
   })
 
-  it("não repete a modalidade na linha de metadados (área · regime · local)", async () => {
+  it("mantém todos os dados no resumo lateral", async () => {
     const jsx = await VagaDetalhePage({ params: Promise.resolve({ slug: "vaga-1" }) })
     render(jsx)
-    const metadados = screen.getByText(/Vendas/).closest("p")!
-    expect(metadados).toHaveTextContent("Vendas · PJ · Belo Horizonte")
-    expect(metadados).not.toHaveTextContent("Híbrido")
+    const resumo = screen.getByRole("heading", { name: "Resumo da vaga" }).closest("div")!
+    for (const texto of ["Híbrido", "Vendas", "PJ", "Belo Horizonte"]) expect(within(resumo).getByText(texto)).toBeInTheDocument()
   })
 })

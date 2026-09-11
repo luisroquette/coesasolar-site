@@ -6,9 +6,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const createMock = vi.fn();
+const openAiOptions: Array<Record<string, unknown>> = [];
 
 vi.mock('openai', () => ({
   default: class OpenAI {
+    constructor(options: Record<string, unknown>) {
+      openAiOptions.push(options);
+    }
     chat = { completions: { create: createMock } };
   },
 }));
@@ -51,6 +55,7 @@ const ISSUES = [
 
 beforeEach(() => {
   createMock.mockReset();
+  openAiOptions.length = 0;
 });
 
 describe('REGRESSÃO: deepseek — regenerateWithFeedback nunca propaga erro (fail-open)', () => {
@@ -250,9 +255,15 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
   it('estrutura com 3 seções é inválida (mínimo 7)', () => {
     expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: ESTRUTURA_VALIDA.sections.slice(0, 3) }, 'placa solar')).toBe(false);
   });
-  it('estrutura cuja soma dos alvos fica abaixo de 4.500 palavras é inválida', () => {
+  it('estrutura cuja soma dos alvos fica abaixo de 4.050 palavras é inválida', () => {
     const sections = ESTRUTURA_VALIDA.sections.map(section => ({ ...section, word_target: 500 }));
     expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections }, 'placa solar')).toBe(false);
+  });
+  it('estrutura com 4.050 palavras-alvo é aceita na fronteira de -10%; 4.049 é rejeitada', () => {
+    const atBoundary = ESTRUTURA_VALIDA.sections.map((section, i) => ({ ...section, word_target: i === 0 ? 450 : 600 }));
+    const belowBoundary = atBoundary.map((section, i) => ({ ...section, word_target: i === 0 ? 449 : section.word_target }));
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: atBoundary }, 'placa solar')).toBe(true);
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: belowBoundary }, 'placa solar')).toBe(false);
   });
   it('estrutura com 10 seções é inválida (máximo 9)', () => {
     const extra = [...ESTRUTURA_VALIDA.sections, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!];
@@ -287,7 +298,7 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
   it('describeStructureInvalidity: soma de word_target abaixo do piso aponta o total', () => {
     const sections = ESTRUTURA_VALIDA.sections.map(section => ({ ...section, word_target: 500 }));
     const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, sections }, 'placa solar');
-    expect(reasons).toContain('soma_word_target_3500_abaixo_de_4500');
+    expect(reasons).toContain('soma_word_target_3500_abaixo_de_4050');
   });
   it('describeStructureInvalidity: FAQ com contagem errada aponta o número recebido', () => {
     const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, faq: ESTRUTURA_VALIDA.faq.slice(0, 5) }, 'placa solar');
@@ -325,6 +336,18 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     expect(body).toBe('Instrução do brief como corpo mínimo.');
     expect(body).not.toBe('');
     expect(createMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('REGRESSÃO 11/09/2026: timeout troca de provedor sem retry interno do SDK', async () => {
+    createMock
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockResolvedValueOnce({ choices: [{ message: { content: 'Corpo recuperado.' } }] });
+
+    const body = await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
+
+    expect(body).toBe('Corpo recuperado.');
+    expect(createMock.mock.calls[1][0].model).toBe('z-ai/glm-5.3-flash');
+    expect(openAiOptions.at(-1)).toMatchObject({ timeout: 90_000, maxRetries: 0 });
   });
 });
 
@@ -416,6 +439,18 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
     const bulletCount = (article.content.match(/^- /gm) ?? []).length;
     expect(bulletCount).toBeGreaterThanOrEqual(3);
     expect(article.content.indexOf('## Em resumo')).toBeLessThan(article.content.indexOf('## Perguntas Frequentes'));
+  });
+
+  it('REGRESSÃO 10/09/2026: timeout de uma seção usa fallback local e não derruba o artigo inteiro', async () => {
+    createMock
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(ESTRUTURA_MONTAGEM) } }] })
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockResolvedValue({ choices: [{ message: { content: 'Corpo de exemplo da seção.' } }] });
+
+    const article = await generateArticleWithSections('placa solar');
+
+    expect(article.bodies).toEqual(Array(7).fill('Corpo de exemplo da seção.'));
+    expect(createMock).toHaveBeenCalledTimes(9);
   });
 
   it('injectSectionImages: slot sem imagem correspondente (upload falhou) é removido, nunca publica placeholder cru', () => {
@@ -691,6 +726,27 @@ describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª te
     expect(firstUser).not.toContain('tentativa anterior foi rejeitada');
     expect(secondUser).toContain('tentativa anterior foi rejeitada');
     expect(secondUser).toContain('geração distribuída compartilhada vale a pena');
+  });
+
+  it('desativa retry interno do SDK porque o loop externo já controla as tentativas', async () => {
+    const valida = makeEstrutura('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    await generateArticleStructure('geração distribuída compartilhada vale a pena');
+
+    expect(openAiOptions.at(-1)).toMatchObject({ timeout: 150_000, maxRetries: 0 });
+  });
+
+  it('timeout de estrutura avança no loop externo até o fallback responder', async () => {
+    const valida = makeEstrutura('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    createMock
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    await expect(generateArticleStructure('geração distribuída compartilhada vale a pena')).resolves.toEqual(valida);
+    expect(createMock).toHaveBeenCalledTimes(3);
+    expect(createMock.mock.calls[2][0].model).toBe('z-ai/glm-5.3-flash');
   });
 });
 

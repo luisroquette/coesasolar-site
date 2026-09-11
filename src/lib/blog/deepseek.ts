@@ -146,6 +146,8 @@ export const MIN_SECTIONS = 7;
 export const MAX_SECTIONS = 9;
 export const FAQ_COUNT = 7;
 export const MIN_ARTICLE_WORDS = 4500;
+// O alvo editorial permanece 4.500; validações aceitam a variação autorizada de 10%.
+export const MIN_ACCEPTABLE_ARTICLE_WORDS = Math.floor(MIN_ARTICLE_WORDS * 0.9);
 
 const STRUCTURE_SYSTEM_PROMPT = `Você é um estrategista de conteúdo SEO para ${brand.name} (${brand.siteUrl}),
 ${editorial.businessDescription}. Público: ${editorial.audience}.
@@ -249,7 +251,7 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
     !!s.slug && !!s.meta_desc && !!s.cover_image_prompt &&
     Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
     s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
-    s.sections.reduce((total, sec) => total + sec.word_target, 0) >= MIN_ARTICLE_WORDS &&
+    s.sections.reduce((total, sec) => total + sec.word_target, 0) >= MIN_ACCEPTABLE_ARTICLE_WORDS &&
     Array.isArray(s.faq) && s.faq.length === FAQ_COUNT &&
     s.faq.every(f => !!f.question && !!f.answer) &&
     Array.isArray(s.summary_bullets) && s.summary_bullets.length >= 3 && s.summary_bullets.length <= 5 &&
@@ -280,7 +282,7 @@ export function describeStructureInvalidity(s: ArticleStructure | null, keyword:
       if (!(sec.word_target >= 400 && sec.word_target <= 700)) reasons.push(`section_${i}_word_target_${sec.word_target}_fora_de_400-700`);
     });
     const total = s.sections.reduce((sum, sec) => sum + sec.word_target, 0);
-    if (total < MIN_ARTICLE_WORDS) reasons.push(`soma_word_target_${total}_abaixo_de_${MIN_ARTICLE_WORDS}`);
+    if (total < MIN_ACCEPTABLE_ARTICLE_WORDS) reasons.push(`soma_word_target_${total}_abaixo_de_${MIN_ACCEPTABLE_ARTICLE_WORDS}`);
   }
   if (!Array.isArray(s.faq)) reasons.push('faq_nao_e_array');
   else {
@@ -307,8 +309,7 @@ const PRIMARY_STRUCTURE_MODEL = 'deepseek/deepseek-v4-flash-0731';
 // REGRESSÃO 02/09/2026: as 3 tentativas automáticas do dia usavam o MESMO modelo — um dia
 // ruim do provedor (ex.: reasoning_content comendo o teto de tokens repetidamente) derrubava
 // as 3 igual. z-ai/glm-5.3-flash já é usado neste account OpenRouter (quality-gate.ts) —
-// fallback comprovado, não uma aposta nova. Só entra na 3ª tentativa de
-// generateArticleStructure (não muda writeSection/regenerateWithFeedback).
+// fallback comprovado, não uma aposta nova.
 export const FALLBACK_STRUCTURE_MODEL = 'z-ai/glm-5.3-flash';
 
 // As 2 primeiras tentativas usam PRIMARY_STRUCTURE_MODEL (mesmo modelo); a 3ª troca pra
@@ -353,13 +354,19 @@ export async function generateArticleStructure(
       attempt === 1
         ? ''
         : `\n\nATENÇÃO: a tentativa anterior foi rejeitada. O campo "title" DEVE conter a keyword EXATA "${keyword}" nas primeiras palavras, com a ordem preservada (a pontuação pode separar as palavras). Retorne SOMENTE o JSON válido da estrutura, sem texto ao redor.`;
-    const text = await askDeepseek(
-      STRUCTURE_SYSTEM_PROMPT,
-      buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
-      'coesasolar/blog/article-structure',
-      STRUCTURE_MAX_TOKENS,
-      model,
-    );
+    let text: string;
+    try {
+      text = await askDeepseek(
+        STRUCTURE_SYSTEM_PROMPT,
+        buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
+        'coesasolar/blog/article-structure',
+        STRUCTURE_MAX_TOKENS,
+        model,
+      );
+    } catch (err) {
+      console.warn(`[deepseek] tentativa ${attempt} de estrutura (${model}) falhou; avançando para o próximo modelo.`, err);
+      continue;
+    }
     console.warn(`[deepseek] tentativa ${attempt} de estrutura (${model}) levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
@@ -413,7 +420,9 @@ export async function writeSection(
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: 90_000,
-    maxRetries: 1,
+    // O loop abaixo já controla as tentativas e troca de modelo. Retry interno repetia
+    // o mesmo provedor por até 180s e impedia o fallback de ser alcançado.
+    maxRetries: 0,
   });
   const user = `Tema geral do artigo: "${keyword}" (seção ${sectionIndex + 1} de ${totalSections}).
 Título desta seção (H2): ${section.h2}
@@ -426,20 +435,26 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
   // generateArticleStructure/generateArticle), nunca lança — retorna vazio no pior caso, o
   // pipeline segue publicável (mesmo contrato de antes).
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const response = await client.chat.completions.create({
-      user: 'coesasolar/blog/write-section',
-      model: 'deepseek/deepseek-v4-flash-0731',
-      messages: [
-        { role: 'system', content: SECTION_SYSTEM_PROMPT },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.7,
-      max_tokens: maxTokensForSection(section.word_target),
-    });
-    const text = response.choices[0]?.message?.content?.trim() ?? '';
-    if (text) return text;
+    const model = attempt === 1 ? PRIMARY_STRUCTURE_MODEL : FALLBACK_STRUCTURE_MODEL;
+    try {
+      const response = await client.chat.completions.create({
+        user: 'coesasolar/blog/write-section',
+        model,
+        messages: [
+          { role: 'system', content: SECTION_SYSTEM_PROMPT },
+          { role: 'user', content: user },
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokensForSection(section.word_target),
+        ...(model === PRIMARY_STRUCTURE_MODEL ? { reasoning_effort: 'low' as const } : {}),
+      });
+      const text = response.choices[0]?.message?.content?.trim() ?? '';
+      if (text) return text;
+    } catch (err) {
+      console.warn(`[deepseek] Seção "${section.h2}" falhou na tentativa ${attempt} (${model}).`, err);
+    }
     if (attempt === 2) break;
-    console.warn(`[deepseek] Seção "${section.h2}" voltou vazia na tentativa ${attempt}. Retentando...`);
+    console.warn(`[deepseek] Retentando seção "${section.h2}" com ${FALLBACK_STRUCTURE_MODEL}...`);
   }
   // ACHADO na lapidação (mesmo dia, motor irmão gaussmob-nextjs): sem fallback textual, uma
   // seção que segue vazia nas 2 tentativas publica um H2 seguido de NADA — o mesmo defeito
@@ -534,7 +549,10 @@ export async function generateArticleWithSections(
   const tSections = Date.now();
   const bodies = await Promise.all(
     structure.sections.map((section, index) =>
-      writeSection(keyword, section, index, structure.sections.length)
+      writeSection(keyword, section, index, structure.sections.length).catch((err) => {
+        console.warn(`[deepseek] Seção "${section.h2}" falhou após os retries; usando o content_brief como corpo mínimo.`, err);
+        return section.content_brief;
+      })
     )
   );
   console.warn(`[deepseek] ${bodies.length} seções paralelas levaram ${Math.round((Date.now() - tSections) / 1000)}s`);
@@ -586,7 +604,8 @@ export async function regenerateSectionsWithFeedback(
       content_brief: `${structure.sections[idx]!.content_brief}\n\nCORREÇÃO OBRIGATÓRIA: ${fixInstruction}`,
     };
     try {
-      novos[idx] = await writeSection(keyword, secaoAjustada, idx, structure.sections.length);
+      const regenerated = await writeSection(keyword, secaoAjustada, idx, structure.sections.length);
+      if (regenerated !== secaoAjustada.content_brief) novos[idx] = regenerated;
     } catch {
       // mesma filosofia de regenerateWithFeedback: falha na regeneração mantém o
       // conteúdo anterior daquela seção, nunca quebra o pipeline.
@@ -739,8 +758,8 @@ export async function generateArticle(
   internalLinks: InternalLink[] = [],
   brief: EditorialBrief | null = null,
 ): Promise<ArticleContent> {
-  // Timeout explícito: o default do SDK é 10min, bem acima do maxDuration=300s da rota
-  // de geração — sem isso, uma chamada travada é morta pelo platform timeout em vez de
+  // Timeout explícito: uma única chamada não pode consumir a maior parte dos 800s da rota
+  // de geração — sem isso, uma chamada travada é morta pelo deadline do pipeline em vez de
   // lançar um erro tratável, e o insertRunLog de erro no catch da rota nunca roda.
   const client = new OpenAI({
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
@@ -864,16 +883,18 @@ export function isValidOutline(outline: ArticleOutline, keyword: string): boolea
 }
 
 async function askDeepseek(system: string, user: string, route: string, maxTokens?: number, model: string = PRIMARY_STRUCTURE_MODEL): Promise<string> {
-  // Mesmo motivo do timeout em generateArticle: default do SDK (10min) excede o
-  // maxDuration da rota (300s) e mascara falhas de rede como platform kill sem log.
+  // Mesmo motivo do timeout em generateArticle: o default do SDK (10min) consumiria quase
+  // todo o orçamento da rota e mascararia falhas de rede como deadline do pipeline.
   // 150s (não 90s) quando maxTokens é passado (generateArticleStructure): achado 25/08/2026
   // — 90s cortava a conexão no meio de uma resposta de raciocínio longa antes dela terminar
-  // (erro "terminated" do Undici), mesmo dentro do maxDuration=300s da rota.
+  // (erro "terminated" do Undici), ainda dentro do antigo maxDuration=300s da rota.
   const client = new OpenAI({
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: maxTokens !== undefined ? 150_000 : 90_000,
-    maxRetries: 1,
+    // generateArticleStructure já controla 3 tentativas e troca de modelo. Retry
+    // interno duplicava cada timeout de 150s e consumia o orçamento do pipeline.
+    maxRetries: maxTokens !== undefined ? 0 : 1,
   });
   // Mesmo motivo do comentário em generateArticle: 'deepseek-v4-flash' substitui o
   // nome legado 'deepseek-chat', desativado pela DeepSeek em 2026-07-24.

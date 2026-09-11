@@ -10,6 +10,29 @@ export interface CampoExtraForm {
   opcoes: string[];
 }
 
+export interface FormacaoForm {
+  instituicao: string;
+  curso: string;
+  nivel?: string;
+  inicio?: string;
+  fim?: string;
+  cursando?: boolean;
+}
+
+export interface ExperienciaForm {
+  empresa: string;
+  cargo: string;
+  inicio?: string;
+  fim?: string;
+  atual?: boolean;
+  descricao?: string;
+}
+
+export interface IdiomaForm {
+  idioma: string;
+  nivel?: 'basico' | 'intermediario' | 'avancado' | 'fluente' | 'nativo';
+}
+
 export interface CandidaturaCampos {
   nome: string;
   email: string;
@@ -19,8 +42,10 @@ export interface CandidaturaCampos {
   cv: File | null;
   portfolioUrl?: string;
   portfolioArquivo?: File | null;
+  portfolioObrigatorio?: boolean;
   camposExtras?: CampoExtraForm[];
   respostasExtras?: Record<string, string>;
+  arquivosExtras?: Record<string, File | null>;
 }
 
 export function coletarUtm(searchParams: URLSearchParams): Record<string, string> {
@@ -57,6 +82,9 @@ export function validarClient(campos: CandidaturaCampos): string[] {
   if (campos.portfolioUrl && campos.portfolioArquivo) {
     erros.push('Envie o portfólio como link OU arquivo, não os dois.');
   }
+  if (campos.portfolioObrigatorio && !campos.portfolioUrl?.trim() && !campos.portfolioArquivo) {
+    erros.push('Anexe ou informe o link do portfólio.');
+  }
   if (campos.portfolioArquivo) {
     const PORTFOLIO_MAX_BYTES = 1.5 * 1024 * 1024;
     if (campos.portfolioArquivo.size > PORTFOLIO_MAX_BYTES) {
@@ -69,6 +97,9 @@ export function validarClient(campos: CandidaturaCampos): string[] {
   for (const campo of campos.camposExtras ?? []) {
     if (campo.obrigatorio && campo.tipo !== 'anexo' && !(campos.respostasExtras?.[campo.id] ?? '').trim()) {
       erros.push(`Informe: ${campo.label}.`);
+    }
+    if (campo.obrigatorio && campo.tipo === 'anexo' && !campos.arquivosExtras?.[campo.id]) {
+      erros.push(`Anexe: ${campo.label}.`);
     }
   }
   return erros;
@@ -85,6 +116,18 @@ export function preencherSeVazio(atual: string, extraido: string | undefined): s
   return atual || extraido || atual;
 }
 
+export function preencherListaSeVazia<T>(atual: T[], extraido: T[] | undefined): T[] {
+  return atual.length > 0 || !Array.isArray(extraido) ? atual : extraido;
+}
+
+export function listaDeTexto(valor: string): string[] {
+  return valor.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean);
+}
+
+export function periodoInvalido(inicio?: string, fim?: string): boolean {
+  return Boolean(inicio && fim && fim < inicio);
+}
+
 /** Normaliza um número BR (com ou sem 55/+55, com ou sem formatação) em link wa.me. */
 export function montarLinkWhatsapp(whatsapp: string): string {
   const digitos = whatsapp.replace(/\D/g, '');
@@ -98,6 +141,9 @@ export function montarFormData(
     consent: boolean; cv: File | null; website: string;
     portfolioUrl?: string; portfolioArquivo?: File | null;
     pretensaoSalarial?: string; disponibilidade?: string;
+    resumoProfissional?: string; anosExperiencia?: string; fontePreenchimento?: 'manual' | 'ia_cv';
+    cargoAtual?: string; formacoes?: FormacaoForm[]; experiencias?: ExperienciaForm[];
+    habilidades?: string[]; idiomas?: IdiomaForm[]; certificacoes?: string[];
   },
   vagaSlug: string,
   utm: Record<string, string>,
@@ -118,6 +164,15 @@ export function montarFormData(
   if (campos.portfolioArquivo) fd.append('portfolio', campos.portfolioArquivo);
   if (campos.pretensaoSalarial) fd.append('pretensao_salarial', campos.pretensaoSalarial);
   if (campos.disponibilidade) fd.append('disponibilidade', campos.disponibilidade);
+  if (campos.resumoProfissional) fd.append('resumo_profissional', campos.resumoProfissional);
+  if (campos.anosExperiencia) fd.append('anos_experiencia', campos.anosExperiencia);
+  if (campos.fontePreenchimento) fd.append('fonte_preenchimento', campos.fontePreenchimento);
+  if (campos.cargoAtual) fd.append('cargo_atual', campos.cargoAtual);
+  fd.append('formacoes', JSON.stringify(campos.formacoes ?? []));
+  fd.append('experiencias', JSON.stringify(campos.experiencias ?? []));
+  fd.append('habilidades', JSON.stringify(campos.habilidades ?? []));
+  fd.append('idiomas', JSON.stringify(campos.idiomas ?? []));
+  fd.append('certificacoes', JSON.stringify(campos.certificacoes ?? []));
   if (extras?.respostasExtras && Object.keys(extras.respostasExtras).length > 0) {
     fd.append('respostas_extras', JSON.stringify(extras.respostasExtras));
   }

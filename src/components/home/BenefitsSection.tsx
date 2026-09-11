@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { SimulationForm } from "./SimulationForm";
+import { PUBLIC_DISCOUNT_LABEL } from "@/lib/public-discount";
 
 export function BenefitsSection() {
   return (
@@ -25,14 +26,14 @@ export function BenefitsSection() {
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-lg">
               A energia solar por assinatura da COESA permite que você reduza sua conta de luz 
-              em até 30% sem instalar painéis, sem obras e sem nenhum investimento inicial. 
+              em {PUBLIC_DISCOUNT_LABEL} sem instalar painéis, sem obras e sem nenhum investimento inicial.
               A energia vem direto de nossas usinas solares.
             </p>
             
             {/* Feature List - Minimal */}
             <div className="space-y-4">
               {[
-                "Economia de até 30% na conta de luz",
+                `Economia de ${PUBLIC_DISCOUNT_LABEL} na conta de luz`,
                 "Sem obras ou instalações na sua casa",
                 "Energia 100% limpa e renovável",
                 "Contratação 100% digital",

@@ -1,93 +1,22 @@
-// src/app/carreiras/page.tsx
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { HomeNavbar } from '@/components/home/HomeNavbar';
-import { HomeFooter } from '@/components/home/HomeFooter';
-import { getVagasPublicadas } from '@/lib/carreiras/supabase';
-import { Badge } from '@/components/ui/badge';
+import type { Metadata } from "next"
+import { CareersHeader } from "@/components/carreiras/CareersHeader"
+import { CarreirasList } from "@/components/carreiras/CarreirasList"
+import { HomeFooter } from "@/components/home/HomeFooter"
+import { getVagasPublicadas } from "@/lib/carreiras/supabase"
 
-export const revalidate = 600;
-
+export const revalidate = 0
 export const metadata: Metadata = {
-  title: 'Carreiras | Coesa Energia',
-  description: 'Vagas abertas na Coesa Energia — venha construir o futuro da energia com a gente.',
-};
-
-const serif = { fontFamily: 'Georgia, serif' };
-
-const ORDEM_AREAS = [
-  'Tech/Dev & AI', 'Vendas', 'Operação', 'Pessoas', 'Jurídico',
-  'Marketing e Inovação', 'Sucesso do Cliente', 'Backoffice', 'Financeiro',
-];
-
-function agruparPorArea(vagas: Awaited<ReturnType<typeof getVagasPublicadas>>) {
-  const porArea = new Map<string, typeof vagas>();
-  for (const vaga of vagas) {
-    const area = vaga.area && ORDEM_AREAS.includes(vaga.area) ? vaga.area : 'Outras';
-    porArea.set(area, [...(porArea.get(area) ?? []), vaga]);
-  }
-  const ordem = [...ORDEM_AREAS, 'Outras'];
-  return ordem.filter((a) => porArea.has(a)).map((area) => ({ area, vagas: porArea.get(area)! }));
+  title: "Carreiras | Coesa Energia",
+  description: "Vagas abertas na Coesa Energia — venha construir o futuro da energia com a gente.",
+  alternates: { canonical: "https://coesasolar.com.br/carreiras" },
 }
 
 export default async function CarreirasPage() {
-  const vagas = await getVagasPublicadas();
-
-  return (
-    <main className="min-h-screen bg-background">
-      <HomeNavbar />
-
-      <section className="bg-coesa-green pt-32 pb-20 px-4">
-        <div className="container max-w-4xl mx-auto text-center">
-          <h1 style={serif} className="text-4xl md:text-6xl font-bold text-white leading-tight">
-            Venha construir o futuro da energia com a gente.
-          </h1>
-        </div>
-      </section>
-
-      <section className="container max-w-4xl mx-auto px-4 py-16">
-        {vagas.length === 0 ? (
-          <p className="text-center text-muted-foreground">
-            Nenhuma vaga aberta no momento — deixe seu contato em breve.
-          </p>
-        ) : (
-          <div className="space-y-12">
-            {agruparPorArea(vagas).map(({ area, vagas: vagasDaArea }) => (
-              <section key={area}>
-                <div className="flex items-center gap-4 mb-5">
-                  <h2 className="text-xs font-semibold uppercase tracking-widest text-coesa-ink whitespace-nowrap">
-                    {area}
-                  </h2>
-                  <div className="h-px flex-1 bg-coesa-line" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {vagasDaArea.map((vaga) => (
-                    <Link
-                      key={vaga.slug}
-                      href={`/carreiras/${vaga.slug}`}
-                      className="group block border border-coesa-line rounded-lg p-6 hover:border-coesa-ink transition-colors bg-white"
-                    >
-                      <h3 style={serif} className="text-xl font-semibold text-foreground">
-                        {vaga.titulo}
-                      </h3>
-                      <div className="mt-2 h-px w-12 bg-coesa-ink" />
-                      {vaga.modalidade && (
-                        <Badge className="mt-2 border-transparent bg-coesa-green/10 text-coesa-green">{vaga.modalidade}</Badge>
-                      )}
-                      <p className="mt-3 text-xs uppercase tracking-wider text-coesa-text-muted flex flex-wrap items-center gap-2">
-                        {[vaga.regime, vaga.local].filter(Boolean).join(' · ')}
-                        <span className="text-coesa-ink group-hover:translate-x-1 transition-transform">→</span>
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <HomeFooter />
-    </main>
-  );
+  const vagas = await getVagasPublicadas()
+  return <main className="min-h-screen bg-[#06110d] text-white">
+    <CareersHeader />
+    <section className="border-b border-white/15 px-5 pb-12 pt-10 md:px-8 md:pb-16 md:pt-14"><div className="container mx-auto max-w-6xl"><p className="mb-4 text-[11px] font-bold uppercase tracking-[0.24em] text-[#83d9ad]">Carreiras Coesa</p><h1 className="max-w-3xl text-3xl font-semibold uppercase leading-[1.05] tracking-[-0.02em] md:text-[44px]">Construa o futuro da energia com a gente.</h1><p className="mt-5 max-w-2xl text-base leading-7 text-white/65">Conheça as oportunidades abertas e encontre o próximo desafio para o seu perfil.</p></div></section>
+    <section className="container mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">{vagas.length ? <CarreirasList vagas={vagas} /> : <div className="rounded-2xl border border-white/15 p-8 text-center"><p>Nenhuma vaga aberta no momento.</p><a href="/carreiras/banco-de-talentos" className="mt-3 inline-block font-semibold text-[#83d9ad] underline">Entrar no banco de talentos</a></div>}</section>
+    <HomeFooter compact />
+  </main>
 }
