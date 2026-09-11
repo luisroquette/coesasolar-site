@@ -11,6 +11,9 @@ describe("homepage press section", () => {
 
     expect(homepage).toMatch(/<AboutSection\s*\/>\s*<PressSection\s*\/>/);
     expect(section.match(/href: "https:\/\//g)).toHaveLength(9);
+    expect(section.match(/logo: "\/media\/press\//g)).toHaveLength(9);
+    expect(section).not.toContain("image:");
+    expect(section).toContain("object-contain");
     expect(section).toContain('id="imprensa"');
     expect(section).toContain("<Carousel");
   });

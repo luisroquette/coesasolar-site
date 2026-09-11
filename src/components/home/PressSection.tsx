@@ -13,63 +13,65 @@ const pressItems = [
     source: "O Tempo",
     title: "Energia por assinatura faz Minas Gerais liderar setor no Brasil",
     href: "https://www.otempo.com.br/minas-sa/2025/11/12/energia-por-assinatura-faz-minas-gerais-liderar-setor-no-brasil",
-    image: "https://www.otempo.com.br/content/dam/otempo/editorias/minas%20sa/2025/11/12/minas%20sa-energia_por_assinatura-coesa%20energia-1762980359.jpg",
+    logo: "/media/press/o-tempo.svg",
     type: "article",
   },
   {
     source: "BM&C News",
     title: "Energia por assinatura se consolida como motor da transição energética",
     href: "https://bmcnews.com.br/petroleo-e-energia/energia-por-assinatura-se-consolida-como-motor-da-transicao-energetica/",
-    image: "https://bmcnews.com.br/wp-content/uploads/2025/10/energia-por-assinatura.jpg",
+    logo: "/media/press/bmc-news.png",
     type: "article",
   },
   {
     source: "Times Brasil — CNBC",
     title: "COESA em entrevista com a Times Brasil",
     href: "https://www.youtube.com/watch?v=l9xkUcINWdY",
-    image: "https://i.ytimg.com/vi/l9xkUcINWdY/maxresdefault.jpg",
+    logo: "/media/press/times-brasil.svg",
+    darkOnWhite: true,
     type: "video",
   },
   {
     source: "Revista Potência",
     title: "Transição energética pauta a COP30 e acelera corrida por novos modelos de energia limpa",
     href: "https://revistapotencia.com.br/portal-potencia/energia/transicao-energetica-pauta-a-cop30-e-acelera-corrida-por-novos-modelos-de-energia-limpa/",
-    image: "https://revistapotencia.com.br/wp-content/uploads/2025/12/14-1.png",
+    logo: "/media/press/revista-potencia.png",
     type: "article",
   },
   {
     source: "YouTube",
     title: "Entenda a energia solar por assinatura e suas vantagens",
     href: "https://www.youtube.com/watch?v=Z0MGJP2Ot-w",
-    image: "https://i.ytimg.com/vi/Z0MGJP2Ot-w/hqdefault.jpg",
+    logo: "/media/press/youtube.svg",
     type: "video",
   },
   {
     source: "Diário do Comércio",
     title: "Modelo de assinatura solar cresce com COP30 e cenário favorável à transição energética",
     href: "https://diariodocomercio.com.br/negocios/modelo-assinatura-solar-cresce-cop30/",
-    image: "https://diariodocomercio.com.br/wp-content/uploads/2025/11/cop30-belem.jpg",
+    logo: "/media/press/diario-do-comercio.svg",
     type: "article",
   },
   {
     source: "R7 — Mundo Agro",
     title: "Energia solar por assinatura avança no campo e alivia custos do produtor rural",
     href: "https://noticias.r7.com/prisma/mundo-agro/energia-solar-por-assinatura-avanca-no-campo-e-alivia-custos-do-produtor-rural-23012026/",
-    image: "https://newr7-r7-prod.web.arc-cdn.net/resizer/v2/6T3SUZ64PFHWPII4C23D5VEGZE.webp?smart=true&auth=fc2e9cd2e4ea8c336c76bce001edd7b0eb2f109d22377610d54219c562b46c8a&width=1200&height=630",
+    logo: "/media/press/r7.svg",
+    darkOnWhite: true,
     type: "article",
   },
   {
     source: "Agrotempo — Spotify",
     title: "Produtor rural pode economizar até 25% da conta de luz com energia solar por assinatura",
     href: "https://open.spotify.com/episode/2Y8JDmhjzAytyhELl9Dtmj",
-    image: "https://i.scdn.co/image/ab6765630000ba8ab310c9bc101c686cb506bf9b",
+    logo: "/media/press/spotify.png",
     type: "podcast",
   },
   {
     source: "YouTube",
     title: "Energia solar por assinatura se torna alternativa para produtores rurais",
     href: "https://www.youtube.com/watch?v=_-yk8-Pm7CQ",
-    image: "https://i.ytimg.com/vi/_-yk8-Pm7CQ/maxresdefault.jpg",
+    logo: "/media/press/youtube.svg",
     type: "video",
   },
 ] as const;
@@ -126,14 +128,13 @@ export function PressSection() {
                   transition={{ duration: 0.5, delay: (index % 3) * 0.08 }}
                   className="group block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-4 focus-visible:ring-offset-[#f2f0ea]"
                 >
-                  <div className="relative mb-5 aspect-[16/10] overflow-hidden bg-black/10">
+                  <div className="relative mb-5 aspect-[16/10] overflow-hidden border border-black/10 bg-white">
                     <img
-                      src={item.image}
-                      alt=""
+                      src={item.logo}
+                      alt={`Logomarca ${item.source}`}
                       loading="lazy"
-                      className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.035]"
+                      className={`h-full w-full object-contain p-12 transition duration-500 ease-out group-hover:scale-[1.035] sm:p-14 ${"darkOnWhite" in item && item.darkOnWhite ? "brightness-0" : ""}`}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
                     {item.type !== "article" && (
                       <span className="absolute bottom-4 left-4 grid h-11 w-11 place-items-center rounded-full bg-white text-black shadow-lg transition-transform group-hover:scale-110">
                         {item.type === "video" ? (
