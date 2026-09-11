@@ -67,6 +67,7 @@ const countArticleWords = vi.fn(() => 5000);
 vi.mock('@/lib/blog/validate', () => ({
   countArticleWords,
   MIN_ARTICLE_WORDS: 4500,
+  MIN_ACCEPTABLE_ARTICLE_WORDS: 4050,
   validateArticle: vi.fn(() => ({ ok: true, issues: [] })),
 }));
 

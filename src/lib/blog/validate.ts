@@ -3,8 +3,8 @@
 // Neil Patel / RD Station no artigo REAL, não confia no checklist do prompt.
 // Falha → o pipeline regenera uma vez; se falhar de novo, publica com aviso.
 
-import { MIN_ARTICLE_WORDS, MIN_SECTIONS, MAX_SECTIONS } from './deepseek';
-export { MIN_ARTICLE_WORDS } from './deepseek';
+import { MIN_ACCEPTABLE_ARTICLE_WORDS, MIN_ARTICLE_WORDS, MIN_SECTIONS, MAX_SECTIONS } from './deepseek';
+export { MIN_ACCEPTABLE_ARTICLE_WORDS, MIN_ARTICLE_WORDS } from './deepseek';
 
 export interface ValidationInput {
   keyword: string;
@@ -62,7 +62,7 @@ export function validateArticle(input: ValidationInput): ValidationResult {
   // Blocos de código markdown não são conteúdo do artigo — ignorar nas medições estruturais.
   const codeStripped = content.replace(/```[\s\S]*?```/g, '');
 
-  // 1. Word count ≥ 4500 (contrato editorial medido também pelo Sentinel)
+  // 1. Alvo 4.500; guardrail aceita variação de até 10% para menos.
   const plain = codeStripped
     .replace(/^#{1,6}\s.*$/gm, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
@@ -70,8 +70,8 @@ export function validateArticle(input: ValidationInput): ValidationResult {
     .replace(/^[-*]\s/gm, ' ')
     .replace(/[*>`|]/g, ' ');
   const words = countArticleWords(content);
-  if (words < MIN_ARTICLE_WORDS) {
-    add('word_count', `Artigo com ${words} palavras — piso editorial de ${MIN_ARTICLE_WORDS}.`);
+  if (words < MIN_ACCEPTABLE_ARTICLE_WORDS) {
+    add('word_count', `Artigo com ${words} palavras — piso aceito de ${MIN_ACCEPTABLE_ARTICLE_WORDS} (alvo: ${MIN_ARTICLE_WORDS}).`);
   }
 
   // 2. Título: ≤ 60 chars, keyword presente e nas primeiras palavras

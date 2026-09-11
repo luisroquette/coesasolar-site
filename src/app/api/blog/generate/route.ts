@@ -18,7 +18,7 @@ import {
 } from '@/lib/blog/deepseek';
 import { generateAndUploadCover, generateAndUploadBodyImages, generateAndUploadInfographic } from '@/lib/blog/image-gen';
 import { injectInfographic, injectInlineCtas } from '@/lib/blog/image-body';
-import { countArticleWords, MIN_ARTICLE_WORDS, validateArticle } from '@/lib/blog/validate';
+import { countArticleWords, MIN_ACCEPTABLE_ARTICLE_WORDS, validateArticle } from '@/lib/blog/validate';
 import { runQualityGateLoop, type QualityGateResult } from '@/lib/blog/quality-gate';
 import { hasTimeBudget } from '@/lib/blog/time-budget';
 import { checkOpenRouterBalance } from '@/lib/blog/openrouter-budget';
@@ -273,16 +273,11 @@ export async function GET(request: NextRequest) {
 
     // REGRESSÃO 02/09/2026: gate exigia o piso EXATO (4500) contra um total que é SOMA de
     // 7-9 seções escritas "sem contar palavra" (instrução deliberada — contar produz prosa
-    // artificialmente inchada). LLM não bate número exato por composição; variância de 1-2%
-    // pra menos é normal e derrubava artigos praticamente prontos (achado real: 4421/4500,
-    // 1,8% abaixo). Tolerância de 10% no GATE DE PUBLICAÇÃO — MIN_ARTICLE_WORDS continua
-    // intocado como alvo passado ao modelo (isValidStructure/prompt de estrutura), só o piso
-    // de aceitar-e-publicar fica mais realista.
-    const PUBLISH_WORD_COUNT_TOLERANCE = 0.9;
-    const minPublishableWords = Math.floor(MIN_ARTICLE_WORDS * PUBLISH_WORD_COUNT_TOLERANCE);
+    // artificialmente inchada). LLM não bate número exato por composição; o alvo continua
+    // 4.500 e todos os guardrails usam o piso compartilhado de 4.050 (variação de 10%).
     const finalWordCount = countArticleWords(finalContentWithCtas);
-    if (finalWordCount < minPublishableWords) {
-      throw new Error(`article_below_${minPublishableWords}_words:${finalWordCount}`);
+    if (finalWordCount < MIN_ACCEPTABLE_ARTICLE_WORDS) {
+      throw new Error(`article_below_${MIN_ACCEPTABLE_ARTICLE_WORDS}_words:${finalWordCount}`);
     }
 
     // 4. Salvar artigo (com collision handling interno)

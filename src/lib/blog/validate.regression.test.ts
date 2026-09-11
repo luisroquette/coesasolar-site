@@ -96,9 +96,17 @@ describe('REGRESSÃO: validador pós-geração (checklist Neil/RD)', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('word_count: reprova artigo com menos de 4500 palavras', () => {
+  it('word_count: reprova artigo com menos de 4050 palavras', () => {
     const input = makeValidInput();
     input.content = 'Artigo curto demais para ranquear.\n\n## Só isso\n\nFim.';
+    expect(rules(input)).toContain('word_count');
+  });
+
+  it('word_count: aceita 4050 palavras e reprova 4049 (tolerância exata de 10%)', () => {
+    const input = makeValidInput();
+    input.content = Array(4050).fill('palavra').join(' ');
+    expect(rules(input)).not.toContain('word_count');
+    input.content = Array(4049).fill('palavra').join(' ');
     expect(rules(input)).toContain('word_count');
   });
 
