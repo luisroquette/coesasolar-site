@@ -20,8 +20,8 @@ export function PlansSection() {
     <section id="planos" className="bg-white py-20 lg:py-32">
       <div className="container mx-auto px-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ y: 20 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="mb-12 text-center lg:mb-16"
@@ -38,8 +38,8 @@ export function PlansSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ y: 30 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
           className="mx-auto grid max-w-5xl overflow-hidden rounded-sm border border-gray-200 bg-white md:grid-cols-[0.85fr_1.15fr]"

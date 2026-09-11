@@ -11,9 +11,9 @@ export function FABButton({ visible, onClick }: FABButtonProps) {
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
+          animate={{ y: 0 }}
+          exit={{ y: 20 }}
           className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none"
         >
           <motion.button

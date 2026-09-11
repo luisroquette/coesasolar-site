@@ -72,8 +72,8 @@ export function HeroSection() {
       <div className="relative z-10 flex-1 flex items-center justify-center">
         <div className="container mx-auto px-4 text-center text-white">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 20 }}
+            animate={{ y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
             className="max-w-4xl mx-auto"
           >
@@ -93,8 +93,8 @@ export function HeroSection() {
 
             {/* CTA Buttons - Tesla style */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ y: 10 }}
+              animate={{ y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
@@ -126,8 +126,8 @@ export function HeroSection() {
       {/* Stats Bar - Bottom of screen, Tesla-style */}
       <motion.div 
         className="relative z-10 bg-black/40 backdrop-blur-sm border-t border-white/10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ y: 20 }}
+        animate={{ y: 0 }}
         transition={{ delay: 0.8, duration: 0.6 }}
       >
         <div className="container mx-auto px-4 py-6">
@@ -136,8 +136,8 @@ export function HeroSection() {
               <motion.div 
                 key={stat.label}
                 className="text-center text-white"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
                 transition={{ delay: 1 + index * 0.1, duration: 0.4 }}
               >
                 <stat.IconComponent className="w-5 h-5 mx-auto mb-2 text-white/60" />
@@ -152,8 +152,8 @@ export function HeroSection() {
       {/* Scroll Indicator */}
       <motion.div 
         className="absolute bottom-32 left-1/2 -translate-x-1/2 z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{}}
+        animate={{}}
         transition={{ delay: 1.5, duration: 0.5 }}
       >
         <motion.button

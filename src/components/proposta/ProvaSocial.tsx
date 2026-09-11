@@ -52,8 +52,8 @@ export function ProvaSocial() {
           {testimonials.map((t, i) => (
             <motion.div
               key={t.name}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ y: 10 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm"

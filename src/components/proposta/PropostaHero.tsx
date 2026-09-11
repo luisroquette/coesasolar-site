@@ -34,8 +34,8 @@ export function PropostaHero({
       <div className="max-w-[680px] mx-auto px-5 py-10 sm:py-14 text-center text-white">
         {/* Eyebrow */}
         <motion.span
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 10 }}
+          animate={{ y: 0 }}
           className="inline-block text-[11px] uppercase tracking-[2px] font-semibold text-orange-100 mb-2"
         >
           Proposta Exclusiva
@@ -43,8 +43,8 @@ export function PropostaHero({
 
         {/* Nome */}
         <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 10 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.1 }}
           className="text-2xl sm:text-3xl font-extrabold leading-tight mb-1"
         >
@@ -52,8 +52,8 @@ export function PropostaHero({
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{}}
+          animate={{}}
           transition={{ delay: 0.15 }}
           className="text-sm text-orange-100 mb-5"
         >
@@ -62,8 +62,8 @@ export function PropostaHero({
 
         {/* Aviso estimativa */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 10 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.2 }}
           className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-3 text-sm text-orange-50 mb-6 max-w-lg mx-auto text-left"
         >
@@ -73,8 +73,8 @@ export function PropostaHero({
 
         {/* Economia destaque */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
           transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
         >
           <p className="text-sm uppercase tracking-wider font-semibold text-orange-100 mb-1">
@@ -93,8 +93,8 @@ export function PropostaHero({
 
         {/* Comparativo */}
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 15 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.45 }}
           className="flex items-center justify-center gap-3 mt-8 mb-4"
         >

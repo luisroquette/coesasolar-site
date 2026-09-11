@@ -258,9 +258,9 @@ export function EconomyCalculator() {
       <AnimatePresence mode="wait">
         {resultado && valorNumerico >= 100 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            initial={{ y: 20 }}
+            animate={{ y: 0 }}
+            exit={{ y: -20 }}
             transition={{ duration: 0.3 }}
             className="space-y-4"
           >

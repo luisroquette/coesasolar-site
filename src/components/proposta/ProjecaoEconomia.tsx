@@ -38,8 +38,8 @@ export function ProjecaoEconomia({ economiaMensal, economiaAcumulada, fidelidade
             return (
               <motion.div
                 key={bar.label}
-                initial={{ opacity: 0, x: -15 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ x: -15 }}
+                whileInView={{ x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
                 className="flex items-center gap-3"

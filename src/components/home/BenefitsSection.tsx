@@ -23,8 +23,8 @@ export function BenefitsSection() {
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
           {/* Left Column - Text Content */}
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ x: -30 }}
+            whileInView={{ x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
@@ -54,8 +54,8 @@ export function BenefitsSection() {
               ].map((feature, index) => (
                 <motion.div
                   key={feature}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  initial={{ x: -20 }}
+                  whileInView={{ x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   className="flex items-center gap-3"
@@ -69,8 +69,8 @@ export function BenefitsSection() {
 
           {/* Right Column - Form */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ x: 30 }}
+            whileInView={{ x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="lg:sticky lg:top-24"

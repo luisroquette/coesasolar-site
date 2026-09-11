@@ -51,8 +51,8 @@ export function EconomiaDetalhes({
 
         {/* Card economia */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ y: 10 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true }}
           className="bg-white rounded-2xl border border-green-200 p-5 shadow-sm"
         >
