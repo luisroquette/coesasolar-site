@@ -13,17 +13,16 @@ function getDayOfYear(): number {
 }
 
 /** Seed do dia pulando temas já publicados — não repetir artigo a cada N dias. */
-function getSeedSkippingPublished(existingKeywords: string[]): string {
+export function getSeedSkippingPublished(existingKeywords: string[], dayOfYear = getDayOfYear()): string | undefined {
   const published = new Set(existingKeywords.map(k => k.toLowerCase()));
   for (let i = 0; i < SEED_KEYWORDS.length; i++) {
-    const candidate = getNextSeedKeyword(getDayOfYear() + i);
+    const candidate = getNextSeedKeyword(dayOfYear + i);
     if (!published.has(candidate.toLowerCase())) return candidate;
   }
-  // Tudo publicado: recicla do rodízio mesmo assim (blog não pode parar).
-  return getNextSeedKeyword(getDayOfYear());
+  return undefined;
 }
 
-export async function fetchTopKeyword(existingKeywords: string[]): Promise<string> {
+export async function fetchTopKeyword(existingKeywords: string[]): Promise<string | undefined> {
   if (!AUTOBLOG_PROFILE.integrations.googleSearchConsoleEnabled) {
     return getSeedSkippingPublished(existingKeywords);
   }
