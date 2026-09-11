@@ -6,9 +6,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const createMock = vi.fn();
+const openAiOptions: Array<Record<string, unknown>> = [];
 
 vi.mock('openai', () => ({
   default: class OpenAI {
+    constructor(options: Record<string, unknown>) {
+      openAiOptions.push(options);
+    }
     chat = { completions: { create: createMock } };
   },
 }));
@@ -51,6 +55,7 @@ const ISSUES = [
 
 beforeEach(() => {
   createMock.mockReset();
+  openAiOptions.length = 0;
 });
 
 describe('REGRESSÃO: deepseek — regenerateWithFeedback nunca propaga erro (fail-open)', () => {
@@ -326,6 +331,18 @@ describe('REGRESSÃO checklist 25/08/2026: writeSection nunca depende do default
     expect(body).not.toBe('');
     expect(createMock).toHaveBeenCalledTimes(2);
   });
+
+  it('REGRESSÃO 11/09/2026: timeout troca de provedor sem retry interno do SDK', async () => {
+    createMock
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockResolvedValueOnce({ choices: [{ message: { content: 'Corpo recuperado.' } }] });
+
+    const body = await writeSection('placa solar', { h2: 'X', content_brief: 'brief', word_target: 600, image_prompt: 'p' }, 0, 8);
+
+    expect(body).toBe('Corpo recuperado.');
+    expect(createMock.mock.calls[1][0].model).toBe('z-ai/glm-5.3-flash');
+    expect(openAiOptions.at(-1)).toMatchObject({ timeout: 90_000, maxRetries: 0 });
+  });
 });
 
 describe('REGRESSÃO 25/08/2026 (lapidação Task 6): generateArticleStructure nunca depende do default de max_tokens da API', () => {
@@ -426,9 +443,8 @@ describe('REGRESSÃO checklist 25/08/2026: montagem por seções (generateArticl
 
     const article = await generateArticleWithSections('placa solar');
 
-    expect(article.bodies[0]).toContain('Instrução de 150-200 palavras para o redator.');
-    expect(article.bodies.slice(1)).toEqual(Array(6).fill('Corpo de exemplo da seção.'));
-    expect(createMock).toHaveBeenCalledTimes(8);
+    expect(article.bodies).toEqual(Array(7).fill('Corpo de exemplo da seção.'));
+    expect(createMock).toHaveBeenCalledTimes(9);
   });
 
   it('injectSectionImages: slot sem imagem correspondente (upload falhou) é removido, nunca publica placeholder cru', () => {
@@ -704,6 +720,15 @@ describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª te
     expect(firstUser).not.toContain('tentativa anterior foi rejeitada');
     expect(secondUser).toContain('tentativa anterior foi rejeitada');
     expect(secondUser).toContain('geração distribuída compartilhada vale a pena');
+  });
+
+  it('desativa retry interno do SDK porque o loop externo já controla as tentativas', async () => {
+    const valida = makeEstrutura('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    await generateArticleStructure('geração distribuída compartilhada vale a pena');
+
+    expect(openAiOptions.at(-1)).toMatchObject({ timeout: 150_000, maxRetries: 0 });
   });
 });
 
