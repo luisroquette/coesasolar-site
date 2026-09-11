@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { WHATSAPP_5193 } from '@/lib/whatsapp-numbers';
+import { WHATSAPP_5192 } from '@/lib/whatsapp-numbers';
 import { PUBLIC_DISCOUNT_PERCENT } from '@/lib/public-discount';
 
 export interface EconomyConfig {
@@ -332,7 +332,7 @@ export function useEconomyCalculator() {
 
   const getWhatsAppLink = useCallback((mensagem?: string) => {
     const texto = mensagem || 'Olá! Vi a calculadora no site e gostaria de um orçamento.';
-    return `https://wa.me/${WHATSAPP_5193}?text=${encodeURIComponent(texto)}`;
+    return `https://wa.me/${WHATSAPP_5192}?text=${encodeURIComponent(texto)}`;
   }, []);
 
   return {

@@ -1,6 +1,6 @@
 import { MessageCircle, Bot } from 'lucide-react';
 
-const SOFIA_WHATSAPP = 'https://wa.me/5531953470438?text=Olá! Tenho uma dúvida sobre a proposta da COESA.';
+const SOFIA_WHATSAPP = 'https://wa.me/5531936185192?text=Olá! Tenho uma dúvida sobre a proposta da COESA.';
 
 export function SofIABlock() {
   const handleClick = () => {

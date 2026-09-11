@@ -256,7 +256,7 @@ export function DocumentUploadWithAI({ propostaId, onExtractionComplete, onManua
       .eq('chave', 'whatsapp_numero')
       .single();
     
-    const whatsappNumber = configData?.valor || '5531936180487';
+    const whatsappNumber = configData?.valor || '5531936185192';
     const message = encodeURIComponent('Olá! Preciso de ajuda com a validação dos meus documentos para a proposta de energia solar.');
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };

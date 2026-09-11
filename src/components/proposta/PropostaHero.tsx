@@ -150,7 +150,7 @@ export function PropostaHero({
             Proposta válida por {diasRestantes} dias
           </span>
           <span>Válida até {validadeFormatada}</span>
-          <a href="https://wa.me/5531953470438?text=Olá! Tenho uma dúvida sobre a proposta da COESA." target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors mt-1">
+          <a href="https://wa.me/5531936185192?text=Olá! Tenho uma dúvida sobre a proposta da COESA." target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors mt-1">
             Dúvidas? Fale com a sofIA agora
           </a>
         </div>
