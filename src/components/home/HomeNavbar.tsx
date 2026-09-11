@@ -47,7 +47,7 @@ export function HomeNavbar() {
         <div className="container mx-auto px-4">
           <nav className="flex items-center justify-between h-20">
             <a href="#inicio" className="flex-shrink-0">
-              <Image src={coesaLogoWhite} alt="COESA" width={192} height={108} className="h-8 lg:h-10 w-auto" priority />
+              <Image src={coesaLogoWhite} alt="COESA" width={192} height={108} className="h-10 w-auto lg:h-14" priority />
             </a>
             <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
