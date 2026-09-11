@@ -1,8 +1,22 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { SimulationForm } from "./SimulationForm";
 import { PUBLIC_DISCOUNT_LABEL } from "@/lib/public-discount";
+import { coletarUtm } from "@/lib/carreiras/form-utils";
+
+const FORM_BASE_URL = "https://web-production-118a5.up.railway.app/f/landing-assinatura-solar-coesa";
 
 export function BenefitsSection() {
+  // Repassa as UTMs da URL do site pro form embeddado, pra manter a atribuição da campanha.
+  const [formSrc, setFormSrc] = useState(FORM_BASE_URL);
+
+  useEffect(() => {
+    const utm = coletarUtm(new URLSearchParams(window.location.search));
+    const query = new URLSearchParams(utm).toString();
+    if (query) setFormSrc(`${FORM_BASE_URL}?${query}`);
+  }, []);
+
   return (
     <section id="beneficios" className="py-20 lg:py-32 bg-white">
       <div className="container mx-auto px-4">
@@ -61,7 +75,16 @@ export function BenefitsSection() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="lg:sticky lg:top-24"
           >
-            <SimulationForm />
+            <link rel="preconnect" href="https://web-production-118a5.up.railway.app" />
+            <iframe
+              src={formSrc}
+              width="100%"
+              height={620}
+              style={{ border: 0, display: "block", margin: "0 auto" }}
+              title="Landing – Assinatura Solar Coesa"
+              sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
           </motion.div>
         </div>
       </div>
