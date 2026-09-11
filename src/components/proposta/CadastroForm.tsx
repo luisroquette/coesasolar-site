@@ -154,16 +154,16 @@ export function CadastroForm({
       {isOpen && (
         <>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{}}
+            animate={{}}
+            exit={{}}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
             onClick={onClose}
           />
           <motion.div
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed inset-x-0 bottom-0 top-0 sm:top-auto sm:max-h-[90vh] z-[101] overflow-y-auto bg-white sm:rounded-t-3xl shadow-2xl"
           >

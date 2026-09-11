@@ -37,8 +37,8 @@ export function ComoFunciona() {
           {steps.map((s, i) => (
             <motion.div
               key={s.num}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ y: 15 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: i * 0.1 }}
               className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm"

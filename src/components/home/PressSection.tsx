@@ -87,8 +87,8 @@ export function PressSection() {
     <section id="imprensa" className="overflow-hidden bg-[#f2f0ea] py-20 lg:py-32">
       <div className="container mx-auto px-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ y: 20 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="mb-12 flex flex-col justify-between gap-6 border-b border-black/15 pb-8 md:flex-row md:items-end lg:mb-16"
@@ -122,8 +122,8 @@ export function PressSection() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`${mediaLabel[item.type]}: ${item.title}`}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ y: 24 }}
+                  whileInView={{ y: 0 }}
                   viewport={{ once: true, margin: "-60px" }}
                   transition={{ duration: 0.5, delay: (index % 3) * 0.08 }}
                   className="group block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-4 focus-visible:ring-offset-[#f2f0ea]"

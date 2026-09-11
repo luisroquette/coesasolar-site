@@ -18,18 +18,18 @@ export function ThankYouModal({ isOpen, onClose, clienteNome, isRegionNotSupport
         <>
           {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{}}
+            animate={{}}
+            exit={{}}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ scale: 0.95, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
@@ -70,8 +70,8 @@ export function ThankYouModal({ isOpen, onClose, clienteNome, isRegionNotSupport
                     </p>
 
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ y: 10 }}
+                      animate={{ y: 0 }}
                       transition={{ delay: 0.3 }}
                       className="p-6 bg-amber-500/10 border border-amber-500/20 mb-8"
                     >
@@ -84,8 +84,8 @@ export function ThankYouModal({ isOpen, onClose, clienteNome, isRegionNotSupport
                     </motion.div>
 
                     <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ x: -20 }}
+                      animate={{ x: 0 }}
                       transition={{ delay: 0.4 }}
                       className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 mb-8"
                     >
@@ -136,8 +136,8 @@ export function ThankYouModal({ isOpen, onClose, clienteNome, isRegionNotSupport
                     {/* Info Cards */}
                     <div className="space-y-4 mb-8">
                       <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ x: -20 }}
+                        animate={{ x: 0 }}
                         transition={{ delay: 0.3 }}
                         className="flex items-center gap-4 p-4 bg-white/5 border border-white/10"
                       >
@@ -153,8 +153,8 @@ export function ThankYouModal({ isOpen, onClose, clienteNome, isRegionNotSupport
                       </motion.div>
 
                       <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ x: -20 }}
+                        animate={{ x: 0 }}
                         transition={{ delay: 0.4 }}
                         className="flex items-center gap-4 p-4 bg-white/5 border border-white/10"
                       >
@@ -172,8 +172,8 @@ export function ThankYouModal({ isOpen, onClose, clienteNome, isRegionNotSupport
 
                     {/* Timing info */}
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ y: 10 }}
+                      animate={{ y: 0 }}
                       transition={{ delay: 0.5 }}
                       className="p-4 bg-green-500/10 border border-green-500/20 mb-8"
                     >

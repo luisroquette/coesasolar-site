@@ -72,7 +72,7 @@ export function HomeNavbar() {
       </motion.header>
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black pt-20 lg:hidden">
+          <motion.div initial={{}} animate={{}} exit={{}} className="fixed inset-0 z-40 bg-black pt-20 lg:hidden">
             <div className="container mx-auto px-4 py-8 flex flex-col gap-6">
               {navLinks.map((link) => (
                 <a key={link.href} href={link.href} className="text-2xl text-white/80 hover:text-white py-2" onClick={() => setIsMobileMenuOpen(false)}>
