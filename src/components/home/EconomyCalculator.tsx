@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calculator, Zap, TrendingUp, Lock, ExternalLink, HelpCircle } from 'lucide-react';
+import { Calculator, Zap, TrendingUp, ExternalLink, HelpCircle } from 'lucide-react';
 import { useEconomyCalculator, CalculoResult, TipoInstalacao } from '@/hooks/useEconomyCalculator';
-import { cn } from '@/lib/utils';
+import { PUBLIC_DISCOUNT_LABEL, PUBLIC_DISCOUNT_PERCENT } from '@/lib/public-discount';
 import {
   Tooltip,
   TooltipContent,
@@ -11,14 +11,6 @@ import {
 } from '@/components/ui/tooltip';
 import faturaCipExemplo from '@/assets/fatura-cip-exemplo.png';
 import faturaTipoInstalacaoExemplo from '@/assets/fatura-tipo-instalacao-exemplo.png';
-interface PlanOption {
-  desconto: number;
-  nome: string;
-  fidelidade: number;
-  destaque: boolean;
-  unlock: boolean;
-}
-
 const TIPOS_INSTALACAO: { value: TipoInstalacao; label: string; kwh: number }[] = [
   { value: 'Monofásico', label: 'Monofásico', kwh: 30 },
   { value: 'Bifásico', label: 'Bifásico', kwh: 50 },
@@ -26,55 +18,23 @@ const TIPOS_INSTALACAO: { value: TipoInstalacao; label: string; kwh: number }[] 
 ];
 
 export function EconomyCalculator() {
-  const { config, planos, concessionarias, loading, calcular, getWhatsAppLink } = useEconomyCalculator();
+  const { config, concessionarias, loading, calcular, getWhatsAppLink } = useEconomyCalculator();
   
   // Main inputs
   const [valorConta, setValorConta] = useState<string>('');
   const [valorNumerico, setValorNumerico] = useState<number>(0);
-  const [descontoSelecionado, setDescontoSelecionado] = useState<number>(25);
+  const descontoSelecionado = PUBLIC_DISCOUNT_PERCENT;
   
   // Parameters inputs (always visible)
   const [cipCustom, setCipCustom] = useState<string>('');
   const [tipoInstalacao, setTipoInstalacao] = useState<TipoInstalacao>('Bifásico');
   const [distribuidoraSelecionada, setDistribuidoraSelecionada] = useState<string>('CEMIG-D');
 
-  // Initialize defaults from config
-  useEffect(() => {
-    if (config.descontoDefault) {
-      setDescontoSelecionado(config.descontoDefault);
-    }
-  }, [config.descontoDefault]);
-
   // Get tariff for selected distribuidora
   const tarifaSelecionada = useMemo(() => {
     const conc = concessionarias.find(c => c.nome === distribuidoraSelecionada);
     return conc?.tarifa || config.tarifaFallback;
   }, [distribuidoraSelecionada, concessionarias, config.tarifaFallback]);
-
-  // Get disponibilidade for selected tipo
-  const disponibilidadeSelecionada = useMemo(() => {
-    return TIPOS_INSTALACAO.find(t => t.value === tipoInstalacao)?.kwh || 50;
-  }, [tipoInstalacao]);
-
-  // Convert planos to plan options
-  const planOptions: PlanOption[] = useMemo(() => {
-    if (planos.length > 0) {
-      return planos.map((p) => ({
-        desconto: p.desconto_percentual,
-        nome: p.nome,
-        fidelidade: p.fidelidade_anos,
-        destaque: p.destaque,
-        unlock: p.unlock,
-      }));
-    }
-    // Fallback options
-    return [
-      { desconto: 15, nome: 'Flex', fidelidade: 1, destaque: false, unlock: false },
-      { desconto: 20, nome: 'Economia', fidelidade: 2, destaque: false, unlock: false },
-      { desconto: 25, nome: 'Premium', fidelidade: 3, destaque: true, unlock: false },
-      { desconto: 30, nome: 'Unlock', fidelidade: 4, destaque: false, unlock: true },
-    ];
-  }, [planos]);
 
   // Calculate result with custom params
   const resultado: CalculoResult | null = useMemo(() => {
@@ -286,76 +246,12 @@ export function EconomyCalculator() {
         </div>
       </div>
 
-      {/* Plan Selector */}
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-muted-foreground">
-          Selecione seu plano de desconto:
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {planOptions.map((plan) => {
-            // Unlock plan (30%) requires minimum consumption from config (3000 kWh)
-            const consumoAtual = resultado?.consumoEstimado || 0;
-            const isUnlockBlocked = plan.unlock && consumoAtual < config.unlockThreshold;
-            const isSelected = descontoSelecionado === plan.desconto;
-
-            return (
-              <button
-                key={plan.desconto}
-                onClick={() => !isUnlockBlocked && setDescontoSelecionado(plan.desconto)}
-                disabled={isUnlockBlocked}
-                className={cn(
-                  'relative p-3 rounded-xl border-2 transition-all text-center',
-                  isSelected
-                    ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
-                    : 'border-border hover:border-primary/50',
-                  isUnlockBlocked && 'opacity-50 cursor-not-allowed bg-muted/30',
-                  plan.destaque && !isSelected && 'border-primary/30'
-                )}
-              >
-                {plan.destaque && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 text-[10px] font-bold bg-primary text-primary-foreground rounded-full">
-                    POPULAR
-                  </span>
-                )}
-                {isUnlockBlocked && (
-                  <div className="absolute -top-2 right-1 flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold bg-amber-500 text-white rounded-full">
-                    <Lock className="h-2.5 w-2.5" />
-                    BLOQUEADO
-                  </div>
-                )}
-                <div className={cn("text-2xl font-bold", isUnlockBlocked ? "text-muted-foreground" : "text-foreground")}>
-                  {plan.desconto}%
-                </div>
-                <div className="text-xs text-muted-foreground">{plan.nome}</div>
-                <div className="text-xs text-muted-foreground">
-                  {plan.fidelidade} {plan.fidelidade === 1 ? 'ano' : 'anos'}
-                </div>
-              </button>
-            );
-          })}
+      <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 p-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">Desconto aplicado</p>
+          <p className="text-xs text-muted-foreground">Plano Economia</p>
         </div>
-        
-        {/* Unlock Banner */}
-        {planOptions.some(p => p.unlock) && (resultado?.consumoEstimado || 0) < config.unlockThreshold && valorNumerico >= 100 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl"
-          >
-            <div className="p-1.5 bg-amber-500/20 rounded-lg">
-              <Lock className="h-4 w-4 text-amber-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">
-                Plano UNLOCK (30%) bloqueado
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Disponível apenas para consumos acima de <strong className="text-foreground">{config.unlockThreshold.toLocaleString('pt-BR')} kWh/mês</strong>. 
-                Seu consumo estimado: <strong className="text-foreground">{resultado?.consumoEstimado || 0} kWh/mês</strong>
-              </p>
-            </div>
-          </motion.div>
-        )}
+        <p className="text-3xl font-bold text-primary">{PUBLIC_DISCOUNT_LABEL}</p>
       </div>
 
       {/* Results */}
