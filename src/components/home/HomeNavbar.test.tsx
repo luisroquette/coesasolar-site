@@ -9,6 +9,14 @@ describe("HomeNavbar", () => {
     expect(link).toHaveAttribute("href", "/carreiras")
   })
 
+  it("exibe a logomarca ampliada sem distorcer a proporção", () => {
+    render(<HomeNavbar />)
+    const logo = screen.getByRole("img", { name: "COESA" })
+    expect(logo.className).toContain("h-10")
+    expect(logo.className).toContain("lg:h-14")
+    expect(logo.className).toContain("w-auto")
+  })
+
   describe("REGRESSÃO: botão Acesso sem contraste (texto branco em fundo branco)", () => {
     // variant="outline" do Button já define bg-background (branco) — sem
     // bg-transparent no className, o fundo branco do variant vence e o
