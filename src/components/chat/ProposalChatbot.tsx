@@ -341,7 +341,7 @@ export function ProposalChatbot({ proposalContext, whatsappNumber: whatsappNumbe
             className="fixed bottom-4 right-4 z-50"
           >
             <a
-              href={`https://wa.me/5531953470438?text=${encodeURIComponent(
+              href={`https://wa.me/5531936185192?text=${encodeURIComponent(
                 `Olá! Sou ${proposalContext.cliente_nome || 'cliente'} e tenho uma dúvida sobre minha proposta da COESA.`
               )}`}
               target="_blank"

@@ -42,7 +42,7 @@ export const CTAFinal = forwardRef<HTMLElement, CTAFinalProps>(function CTAFinal
           Você será direcionado a um formulário rápido. Nenhum compromisso ainda.
         </p>
         <p className="text-xs text-orange-200 mt-3">Proposta válida até {validadeFormatada}</p>
-        <a href="https://wa.me/5531953470438?text=Olá! Tenho uma dúvida sobre a proposta da COESA." target="_blank" rel="noopener noreferrer" className="text-xs text-orange-200 underline hover:text-white transition-colors mt-1">
+        <a href="https://wa.me/5531936185192?text=Olá! Tenho uma dúvida sobre a proposta da COESA." target="_blank" rel="noopener noreferrer" className="text-xs text-orange-200 underline hover:text-white transition-colors mt-1">
           Dúvidas? Fale com a sofIA
         </a>
       </div>

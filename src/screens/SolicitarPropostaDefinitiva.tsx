@@ -1042,7 +1042,7 @@ export default function SolicitarPropostaDefinitiva() {
                   Ficou com alguma dúvida? Fale com a <strong>sofIA</strong>, nossa assistente virtual:
                 </p>
                 <a
-                  href="https://wa.me/5531953470438?text=Olá! Acabei de enviar meus documentos para o contrato COESA e gostaria de saber mais."
+                  href="https://wa.me/5531936185192?text=Olá! Acabei de enviar meus documentos para o contrato COESA e gostaria de saber mais."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl transition-colors"

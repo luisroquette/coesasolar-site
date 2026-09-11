@@ -297,7 +297,7 @@ export function DocumentUploadPJ({ propostaId, onExtractionComplete, onManualMod
       .eq('chave', 'whatsapp_numero')
       .single();
     
-    const whatsappNumber = configData?.valor || '5531936180487';
+    const whatsappNumber = configData?.valor || '5531936185192';
     const message = encodeURIComponent('Olá! Preciso de ajuda com a solicitação de proposta PJ. Estou tendo problemas com a validação dos documentos.');
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
