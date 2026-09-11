@@ -146,6 +146,8 @@ export const MIN_SECTIONS = 7;
 export const MAX_SECTIONS = 9;
 export const FAQ_COUNT = 7;
 export const MIN_ARTICLE_WORDS = 4500;
+// O alvo editorial permanece 4.500; validações aceitam a variação autorizada de 10%.
+export const MIN_ACCEPTABLE_ARTICLE_WORDS = Math.floor(MIN_ARTICLE_WORDS * 0.9);
 
 const STRUCTURE_SYSTEM_PROMPT = `Você é um estrategista de conteúdo SEO para ${brand.name} (${brand.siteUrl}),
 ${editorial.businessDescription}. Público: ${editorial.audience}.
@@ -249,7 +251,7 @@ export function isValidStructure(s: ArticleStructure, keyword: string): boolean 
     !!s.slug && !!s.meta_desc && !!s.cover_image_prompt &&
     Array.isArray(s.sections) && s.sections.length >= MIN_SECTIONS && s.sections.length <= MAX_SECTIONS &&
     s.sections.every(sec => !!sec.h2 && !!sec.content_brief && !!sec.image_prompt && sec.word_target >= 400 && sec.word_target <= 700) &&
-    s.sections.reduce((total, sec) => total + sec.word_target, 0) >= MIN_ARTICLE_WORDS &&
+    s.sections.reduce((total, sec) => total + sec.word_target, 0) >= MIN_ACCEPTABLE_ARTICLE_WORDS &&
     Array.isArray(s.faq) && s.faq.length === FAQ_COUNT &&
     s.faq.every(f => !!f.question && !!f.answer) &&
     Array.isArray(s.summary_bullets) && s.summary_bullets.length >= 3 && s.summary_bullets.length <= 5 &&
@@ -280,7 +282,7 @@ export function describeStructureInvalidity(s: ArticleStructure | null, keyword:
       if (!(sec.word_target >= 400 && sec.word_target <= 700)) reasons.push(`section_${i}_word_target_${sec.word_target}_fora_de_400-700`);
     });
     const total = s.sections.reduce((sum, sec) => sum + sec.word_target, 0);
-    if (total < MIN_ARTICLE_WORDS) reasons.push(`soma_word_target_${total}_abaixo_de_${MIN_ARTICLE_WORDS}`);
+    if (total < MIN_ACCEPTABLE_ARTICLE_WORDS) reasons.push(`soma_word_target_${total}_abaixo_de_${MIN_ACCEPTABLE_ARTICLE_WORDS}`);
   }
   if (!Array.isArray(s.faq)) reasons.push('faq_nao_e_array');
   else {

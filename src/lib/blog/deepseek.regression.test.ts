@@ -255,9 +255,15 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
   it('estrutura com 3 seções é inválida (mínimo 7)', () => {
     expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: ESTRUTURA_VALIDA.sections.slice(0, 3) }, 'placa solar')).toBe(false);
   });
-  it('estrutura cuja soma dos alvos fica abaixo de 4.500 palavras é inválida', () => {
+  it('estrutura cuja soma dos alvos fica abaixo de 4.050 palavras é inválida', () => {
     const sections = ESTRUTURA_VALIDA.sections.map(section => ({ ...section, word_target: 500 }));
     expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections }, 'placa solar')).toBe(false);
+  });
+  it('estrutura com 4.050 palavras-alvo é aceita na fronteira de -10%; 4.049 é rejeitada', () => {
+    const atBoundary = ESTRUTURA_VALIDA.sections.map((section, i) => ({ ...section, word_target: i === 0 ? 450 : 600 }));
+    const belowBoundary = atBoundary.map((section, i) => ({ ...section, word_target: i === 0 ? 449 : section.word_target }));
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: atBoundary }, 'placa solar')).toBe(true);
+    expect(isValidStructure({ ...ESTRUTURA_VALIDA, sections: belowBoundary }, 'placa solar')).toBe(false);
   });
   it('estrutura com 10 seções é inválida (máximo 9)', () => {
     const extra = [...ESTRUTURA_VALIDA.sections, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!, ESTRUTURA_VALIDA.sections[0]!];
@@ -292,7 +298,7 @@ describe('REGRESSÃO checklist 25/08/2026: estrutura precisa de 7-9 seções e 7
   it('describeStructureInvalidity: soma de word_target abaixo do piso aponta o total', () => {
     const sections = ESTRUTURA_VALIDA.sections.map(section => ({ ...section, word_target: 500 }));
     const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, sections }, 'placa solar');
-    expect(reasons).toContain('soma_word_target_3500_abaixo_de_4500');
+    expect(reasons).toContain('soma_word_target_3500_abaixo_de_4050');
   });
   it('describeStructureInvalidity: FAQ com contagem errada aponta o número recebido', () => {
     const reasons = describeStructureInvalidity({ ...ESTRUTURA_VALIDA, faq: ESTRUTURA_VALIDA.faq.slice(0, 5) }, 'placa solar');
