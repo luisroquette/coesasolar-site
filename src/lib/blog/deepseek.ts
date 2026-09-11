@@ -307,8 +307,7 @@ const PRIMARY_STRUCTURE_MODEL = 'deepseek/deepseek-v4-flash-0731';
 // REGRESSÃO 02/09/2026: as 3 tentativas automáticas do dia usavam o MESMO modelo — um dia
 // ruim do provedor (ex.: reasoning_content comendo o teto de tokens repetidamente) derrubava
 // as 3 igual. z-ai/glm-5.3-flash já é usado neste account OpenRouter (quality-gate.ts) —
-// fallback comprovado, não uma aposta nova. Só entra na 3ª tentativa de
-// generateArticleStructure (não muda writeSection/regenerateWithFeedback).
+// fallback comprovado, não uma aposta nova.
 export const FALLBACK_STRUCTURE_MODEL = 'z-ai/glm-5.3-flash';
 
 // As 2 primeiras tentativas usam PRIMARY_STRUCTURE_MODEL (mesmo modelo); a 3ª troca pra
@@ -413,7 +412,9 @@ export async function writeSection(
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: 90_000,
-    maxRetries: 1,
+    // O loop abaixo já controla as tentativas e troca de modelo. Retry interno repetia
+    // o mesmo provedor por até 180s e impedia o fallback de ser alcançado.
+    maxRetries: 0,
   });
   const user = `Tema geral do artigo: "${keyword}" (seção ${sectionIndex + 1} de ${totalSections}).
 Título desta seção (H2): ${section.h2}
@@ -426,20 +427,26 @@ Alvo: ${section.word_target} palavras (não conte, escreva naturalmente até cob
   // generateArticleStructure/generateArticle), nunca lança — retorna vazio no pior caso, o
   // pipeline segue publicável (mesmo contrato de antes).
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const response = await client.chat.completions.create({
-      user: 'coesasolar/blog/write-section',
-      model: 'deepseek/deepseek-v4-flash-0731',
-      messages: [
-        { role: 'system', content: SECTION_SYSTEM_PROMPT },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.7,
-      max_tokens: maxTokensForSection(section.word_target),
-    });
-    const text = response.choices[0]?.message?.content?.trim() ?? '';
-    if (text) return text;
+    const model = attempt === 1 ? PRIMARY_STRUCTURE_MODEL : FALLBACK_STRUCTURE_MODEL;
+    try {
+      const response = await client.chat.completions.create({
+        user: 'coesasolar/blog/write-section',
+        model,
+        messages: [
+          { role: 'system', content: SECTION_SYSTEM_PROMPT },
+          { role: 'user', content: user },
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokensForSection(section.word_target),
+        ...(model === PRIMARY_STRUCTURE_MODEL ? { reasoning_effort: 'low' as const } : {}),
+      });
+      const text = response.choices[0]?.message?.content?.trim() ?? '';
+      if (text) return text;
+    } catch (err) {
+      console.warn(`[deepseek] Seção "${section.h2}" falhou na tentativa ${attempt} (${model}).`, err);
+    }
     if (attempt === 2) break;
-    console.warn(`[deepseek] Seção "${section.h2}" voltou vazia na tentativa ${attempt}. Retentando...`);
+    console.warn(`[deepseek] Retentando seção "${section.h2}" com ${FALLBACK_STRUCTURE_MODEL}...`);
   }
   // ACHADO na lapidação (mesmo dia, motor irmão gaussmob-nextjs): sem fallback textual, uma
   // seção que segue vazia nas 2 tentativas publica um H2 seguido de NADA — o mesmo defeito
@@ -589,7 +596,8 @@ export async function regenerateSectionsWithFeedback(
       content_brief: `${structure.sections[idx]!.content_brief}\n\nCORREÇÃO OBRIGATÓRIA: ${fixInstruction}`,
     };
     try {
-      novos[idx] = await writeSection(keyword, secaoAjustada, idx, structure.sections.length);
+      const regenerated = await writeSection(keyword, secaoAjustada, idx, structure.sections.length);
+      if (regenerated !== secaoAjustada.content_brief) novos[idx] = regenerated;
     } catch {
       // mesma filosofia de regenerateWithFeedback: falha na regeneração mantém o
       // conteúdo anterior daquela seção, nunca quebra o pipeline.
