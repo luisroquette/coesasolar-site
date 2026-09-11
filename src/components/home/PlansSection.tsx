@@ -9,6 +9,8 @@ const features = [
   "Sem taxa de adesão",
   "Contrato digital",
   "Atendimento prioritário",
+  "Sem obras ou instalação de painéis",
+  "Sem investimento inicial",
 ];
 
 export function PlansSection() {
@@ -24,14 +26,11 @@ export function PlansSection() {
           transition={{ duration: 0.6 }}
           className="mb-12 text-center lg:mb-16"
         >
-          <p className="mb-4 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-            Plano
-          </p>
           <h2
             className="mb-6 text-3xl font-medium text-foreground md:text-4xl lg:text-5xl"
             style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
           >
-            Seu desconto é {PUBLIC_DISCOUNT_LABEL}
+            Desconto transparente:
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Uma condição simples, transparente e igual para todos.
