@@ -876,7 +876,9 @@ async function askDeepseek(system: string, user: string, route: string, maxToken
     apiKey: process.env.COESASOLAR_OPENROUTER_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
     timeout: maxTokens !== undefined ? 150_000 : 90_000,
-    maxRetries: 1,
+    // generateArticleStructure já controla 3 tentativas e troca de modelo. Retry
+    // interno duplicava cada timeout de 150s e consumia o orçamento do pipeline.
+    maxRetries: maxTokens !== undefined ? 0 : 1,
   });
   // Mesmo motivo do comentário em generateArticle: 'deepseek-v4-flash' substitui o
   // nome legado 'deepseek-chat', desativado pela DeepSeek em 2026-07-24.

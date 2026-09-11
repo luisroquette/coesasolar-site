@@ -6,9 +6,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const createMock = vi.fn();
+const openAiOptions: Array<Record<string, unknown>> = [];
 
 vi.mock('openai', () => ({
   default: class OpenAI {
+    constructor(options: Record<string, unknown>) {
+      openAiOptions.push(options);
+    }
     chat = { completions: { create: createMock } };
   },
 }));
@@ -51,6 +55,7 @@ const ISSUES = [
 
 beforeEach(() => {
   createMock.mockReset();
+  openAiOptions.length = 0;
 });
 
 describe('REGRESSÃO: deepseek — regenerateWithFeedback nunca propaga erro (fail-open)', () => {
@@ -704,6 +709,15 @@ describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª te
     expect(firstUser).not.toContain('tentativa anterior foi rejeitada');
     expect(secondUser).toContain('tentativa anterior foi rejeitada');
     expect(secondUser).toContain('geração distribuída compartilhada vale a pena');
+  });
+
+  it('desativa retry interno do SDK porque o loop externo já controla as tentativas', async () => {
+    const valida = makeEstrutura('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    createMock.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    await generateArticleStructure('geração distribuída compartilhada vale a pena');
+
+    expect(openAiOptions.at(-1)).toMatchObject({ timeout: 150_000, maxRetries: 0 });
   });
 });
 
