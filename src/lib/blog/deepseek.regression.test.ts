@@ -730,6 +730,18 @@ describe('REGRESSÃO 26/08/2026: generateArticleStructure dá feedback à 2ª te
 
     expect(openAiOptions.at(-1)).toMatchObject({ timeout: 150_000, maxRetries: 0 });
   });
+
+  it('timeout de estrutura avança no loop externo até o fallback responder', async () => {
+    const valida = makeEstrutura('Geração Distribuída Compartilhada Vale a Pena? Entenda os Custos');
+    createMock
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockRejectedValueOnce(new Error('Request timed out.'))
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(valida) } }] });
+
+    await expect(generateArticleStructure('geração distribuída compartilhada vale a pena')).resolves.toEqual(valida);
+    expect(createMock).toHaveBeenCalledTimes(3);
+    expect(createMock.mock.calls[2][0].model).toBe('z-ai/glm-5.3-flash');
+  });
 });
 
 // REGRESSÃO 02/09/2026: as 2 primeiras tentativas usavam o MESMO modelo — um dia ruim do

@@ -352,13 +352,19 @@ export async function generateArticleStructure(
       attempt === 1
         ? ''
         : `\n\nATENÇÃO: a tentativa anterior foi rejeitada. O campo "title" DEVE conter a keyword EXATA "${keyword}" nas primeiras palavras, com a ordem preservada (a pontuação pode separar as palavras). Retorne SOMENTE o JSON válido da estrutura, sem texto ao redor.`;
-    const text = await askDeepseek(
-      STRUCTURE_SYSTEM_PROMPT,
-      buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
-      'coesasolar/blog/article-structure',
-      STRUCTURE_MAX_TOKENS,
-      model,
-    );
+    let text: string;
+    try {
+      text = await askDeepseek(
+        STRUCTURE_SYSTEM_PROMPT,
+        buildStructureUserPrompt(keyword, internalLinks, brief) + retryHint,
+        'coesasolar/blog/article-structure',
+        STRUCTURE_MAX_TOKENS,
+        model,
+      );
+    } catch (err) {
+      console.warn(`[deepseek] tentativa ${attempt} de estrutura (${model}) falhou; avançando para o próximo modelo.`, err);
+      continue;
+    }
     console.warn(`[deepseek] tentativa ${attempt} de estrutura (${model}) levou ${Math.round((Date.now() - tAttempt) / 1000)}s`);
     const structure = parseStructure(text);
     if (structure && isValidStructure(structure, keyword)) return structure;
