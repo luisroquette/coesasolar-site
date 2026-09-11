@@ -76,11 +76,16 @@ export function BenefitsSection() {
             className="lg:sticky lg:top-24"
           >
             <link rel="preconnect" href="https://web-production-118a5.up.railway.app" />
+            {/*
+              Sem API de auto-resize do form (não manda postMessage de altura) e
+              cross-origin impede medir o conteúdo real por JS. Altura fixa por
+              breakpoint, enviesada pra sobrar espaço em vez de cortar/rolar —
+              nunca pode aparecer scroll dentro do form, nem mobile nem desktop.
+            */}
             <iframe
               src={formSrc}
               width="100%"
-              height={620}
-              style={{ border: 0, display: "block", margin: "0 auto" }}
+              className="block h-[950px] sm:h-[780px] lg:h-[620px] border-0 mx-auto"
               title="Landing – Assinatura Solar Coesa"
               sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation"
               referrerPolicy="strict-origin-when-cross-origin"
