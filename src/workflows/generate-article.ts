@@ -19,7 +19,7 @@
  *     falha vive só em coesa_blog_run_log (status running/success/error),
  *     já com self-healing em SQL puro (migrations de reclaim/cleanup) — não
  *     precisa de equivalente a reserveArticleSlot/markArticleFailed.
- *   - Sem cron de retry separado: vercel.json dispara esta rota 5x/dia útil;
+ *   - Sem cron de retry separado: vercel.json dispara esta rota 3x/dia útil;
  *     a idempotência de claimBlogRunToday() JÁ é a estratégia de retry.
  *   - writeSection() retenta três vezes e lança se a seção continuar fora
  *     de 400–700 palavras; o workflow registra a falha sem publicar briefing.
@@ -136,7 +136,8 @@ export async function generateStructureStep(
   await saveOutlineStructure(keyword, JSON.stringify(structure)).catch(() => {});
   return structure;
 }
-generateStructureStep.maxRetries = 1;
+// generateArticleStructure já controla a chamada inicial e os dois retries de provedor.
+generateStructureStep.maxRetries = 0;
 
 export async function writeSectionStep(
   keyword: string,
@@ -263,7 +264,7 @@ export async function qualityGateAndPublishStep(
 
   // Log de sucesso — feito IMEDIATAMENTE após insert do artigo. Crítico: se
   // revalidate/markPublished/distribute abaixo falharem, o log já existe e
-  // o próximo cron run (5x/dia) vê 'success' e não duplica o artigo.
+  // o próximo cron run (3x/dia) vê 'success' e não duplica o artigo.
   await insertRunLog({ keyword, status: 'success' });
 
   return { slug: finalSlug, warnings };
