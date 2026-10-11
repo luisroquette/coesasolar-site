@@ -114,7 +114,7 @@ describe('steps duráveis — estrutura e seções isoladas', () => {
     const source = readFileSync(join(process.cwd(), 'src/workflows/generate-article.ts'), 'utf8');
 
     expect(source).not.toContain('generateStructureAndSectionsStep');
-    expect(source).toContain('generateStructureStep.maxRetries = 1');
+    expect(source).toContain('generateStructureStep.maxRetries = 0');
     expect(source).toContain('writeSectionStep.maxRetries = 1');
     expect(source).toMatch(/Promise\.all\([\s\S]*writeSectionStep/);
   });
